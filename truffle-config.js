@@ -118,8 +118,40 @@ module.exports = {
       gasPrice: 10000,
       chainId:69 
      },
-
-
+	   arbitrum_rinkeby: {
+      provider: function() {
+        return new HDWalletProvider(
+          process.env.MNEMONIC,
+          process.env.PROVIDER_ARBITRUM_RINKEBY,
+          0,
+          4,
+        );
+      },
+      network_id: 421611,
+      confirmations: 2,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+      gas: 4500000,
+      gasPrice: 10000,
+      chainId:69 
+     },
+	   arbitrum: {
+      provider: function() {
+        return new HDWalletProvider(
+          process.env.MNEMONIC,
+          process.env.PROVIDER_ARBITRUM,
+          0,
+          4,
+        );
+      },
+      network_id: 42161,
+      confirmations: 2,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+      gas: 4500000,
+      gasPrice: 10000,
+      chainId:69 
+     },
 
     goerli: {
       provider: function() {
