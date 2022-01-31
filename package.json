@@ -1,0 +1,31 @@
+{
+  "name": "v1-contracts",
+  "version": "1.0.0",
+  "description": "V1 smart contracts",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pheasant-Network/v1-contracts.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.4.2",
+    "bn.js": "^5.2.0",
+    "dotenv": "^10.0.0",
+    "ethereum-proof": "^1.0.4",
+    "merkle-patricia-tree": "^4.2.2",
+    "rlp": "^2.2.7",
+    "solidity-bytes-utils": "^0.8.0"
+  },
+  "bugs": {
+    "url": "https://github.com/Pheasant-Network/v1-contracts/issues"
+  },
+  "homepage": "https://github.com/Pheasant-Network/v1-contracts#readme"
+}
