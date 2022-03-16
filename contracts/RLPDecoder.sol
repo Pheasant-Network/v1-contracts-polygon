@@ -108,7 +108,7 @@ library RLPDecoder {
  
   }
 
-  function toUintX(bytes memory _bytes, uint256 _start) internal pure returns (uint) {
+  function toUintX(bytes memory _bytes, uint256 _start) public pure returns (uint) {
 
       require(_bytes.length > 0 && _bytes.length <= 8);
       if(_bytes.length == 1) {

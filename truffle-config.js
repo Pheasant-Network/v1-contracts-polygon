@@ -72,6 +72,8 @@ module.exports = {
         return new HDWalletProvider(
           process.env.MNEMONIC,
           process.env.PROVIDER_POLYGON,
+          //"https://polygon-rpc.com",
+          ////process.env.PROVIDER_POLYGON,
           0,
           4,
         );
@@ -81,7 +83,7 @@ module.exports = {
       timeoutBlocks: 200,
       skipDryRun: true,
       gas: 4500000,
-      gasPrice: 30000000000,
+      gasPrice: 100000000000,
       chainId:137 
      },
 	   optimism: {
@@ -167,6 +169,21 @@ module.exports = {
       gas: 6000000,
       gasPrice: 10000000000,
     },
+    mainnet: {
+      provider: function() {
+        return new HDWalletProvider(
+          process.env.MNEMONIC,
+          process.env.PROVIDER_ETHEREUM_MAINNET,
+          0,
+          4,
+        );
+      },
+      skipDryRun: true,
+      network_id: 1,        // Ethereum public network
+      gas: 6000000,
+      gasPrice: 20000000000,
+    },
+
     // Another network with more advanced options...
     // advanced: {
     // port: 8777,             // Custom port
