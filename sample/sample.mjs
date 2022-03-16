@@ -2,6 +2,7 @@ import HDWalletProvider from '@truffle/hdwallet-provider';
 import Web3 from 'web3';
 import BN from'bn.js';
 import fs from 'fs';
+import EthereumProof from "ethereum-proof";
 const MNEMONIC="ill rigid magic normal mesh deny round faint museum staff suggest wool"
 const PROVIDER_MUMBAI="https://polygon-mumbai.g.alchemy.com/v2/6gGF8qK26yTyEt3zB6mbQG3joIBL1sUx"
 const PROVIDER_GOERLI="https://goerli.infura.io/v3/deac92b380cd4b219b0c57a59cf363b1"
@@ -28,6 +29,7 @@ const bridge = new web3Mumbai.eth.Contract(contract.abi , contract.networks['800
 const bridgeLocal = new web3.eth.Contract(contract.abi , contract.networks['5777'].address);
 const token = new web3.eth.Contract(tokenContract.abi, tokenContract.networks['5777'].address);
 
+const ethereumProof = new EthereumProof.EthereumProof(web3Goerli);
 
 const main = async () => {
   let accounts = await web3.eth.getAccounts();
@@ -40,6 +42,11 @@ const main = async () => {
   response = await token.methods.approve(contract.networks['5777'].address, amount).send({from:accounts[0], gas: 500000, gasPrice: 10000000000});
   response = await bridgeLocal.methods.newTrade(amount, accounts[0], fee, 0).send({from:accounts[0], gas: 500000, gasPrice: 10000000000});
   console.log(response);
+
+
+  const evidence = await ethereumProof.composeEvidence("0x3d9d1d13f5051765ff870d90dc8ea8eed4427abdcfc48cc71e77b820b8af0a3f", false);
+
+  console.log(evidence);
 }
 
 main();
