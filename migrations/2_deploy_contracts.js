@@ -28,6 +28,7 @@ module.exports = function(deployer, network, accounts) {
       await deployer.link(RLPDecoder, Helper);
       await deployer.deploy(TestToken, accounts[0]);
 
+      await deployer.deploy(TestCheckPointManager);
       const testCheckPointManager = await TestCheckPointManager.deployed();
       await deployer.deploy(PheasantNetworkDisputeManager, testCheckPointManager.address);
       const pheasantNetworkDisputeManager = await PheasantNetworkDisputeManager.deployed();
