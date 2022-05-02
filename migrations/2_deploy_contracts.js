@@ -30,10 +30,6 @@ console.log(disputeManagerContractAddressObj[network].BridgeDisputeManager);
       await deployer.link(RLPDecoder, Helper);
       await deployer.deploy(TestToken, accounts[0]);
 
-      //const testCheckPointManager = await TestCheckPointManager.deployed();
-      //await deployer.deploy(PheasantNetworkDisputeManager, testCheckPointManager.address);
-      //const pheasantNetworkDisputeManager = await PheasantNetworkDisputeManager.deployed();
-      //await deployer.deploy(DisputeHelper, testCheckPointManager.address);
       const testToken = await TestToken.deployed();
       const tokenAddressList = [
         testToken.address
