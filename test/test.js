@@ -43,7 +43,6 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
 
   beforeEach(async () => {
     pheasantNetworkDisputeManager = await PheasantNetworkDisputeManager.new(testCheckPointManager.address, txParams);
-    //pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.new(testToken.address, userDepositThreshold, pheasantNetworkDisputeManager.address, txParams);
     pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.new(tokenAddressList, userDepositThreshold, pheasantNetworkDisputeManager.address, txParams);
     helper = await Helper.new(tokenAddressList, userDepositThreshold, pheasantNetworkDisputeManager.address, txParams);
   });
@@ -691,7 +690,7 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
     assert.equal(trade.status, 3)
 
     let initialUserBalance = await testToken.balanceOf(accounts[0]);
-    await time.increase(time.duration.minutes(31));
+    await time.increase(time.duration.minutes(61));
     let userBalance = await helper.getUserDepositBalance(accounts[0]);
     assert.equal(userBalance.toString(), userDepositThreshold.toString())
 

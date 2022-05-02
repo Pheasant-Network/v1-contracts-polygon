@@ -20,7 +20,6 @@ module.exports = function(deployer, network, accounts) {
 
   let contractAddressObj = utils.getContractAddresses()
   let disputeManagerContractAddressObj = utils.getContractAddresses(disputeManagerContractPath)
-console.log(disputeManagerContractAddressObj[network].BridgeDisputeManager);
   deployer.then(async() => {
     if (network == "development") {
       await deployer.deploy(RLPDecoder);
