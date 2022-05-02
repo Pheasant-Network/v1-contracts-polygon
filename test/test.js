@@ -1271,10 +1271,22 @@ const ethereumProof = new EthereumProof(web3);
       baseFeePerGas: "0x07"
     }
 let result = await ethereumProof.composeBlockHeader(6215948);
-console.log(result);
-result = await ethereumProof.composeTx("0xcf29aa9a8e728ccb838a51a04d13563371e688deb124b17c2435fce36f2919fc");
+//console.log(result);
+//result = await ethereumProof.composeTx("0xcf29aa9a8e728ccb838a51a04d13563371e688deb124b17c2435fce36f2919fc");
 //console.log(Object.values(result.rawTx));
-console.log(web3.utils.keccak256("0x" + result.tx.toString('hex')));
+//console.log(web3.utils.keccak256("0x" + result.tx.toString('hex')));
+
+const encodedtx = Buffer.concat([Buffer.from("02", 'hex'),rlp.encode(list3)])
+const unsignedEncodedtx = Buffer.concat([Buffer.from("02", 'hex'),rlp.encode(list3.slice(0,9))])
+
+const message = web3.utils.keccak256("0x" + unsignedEncodedtx.toString('hex'));
+    const r ='0x10e1dcf5759151ab38ff9bdfa9e0ffa291e7c91ecc078d37a51cc1695b6b61b7';
+    const s = '0x6581c44376517a9906918379e87cf22d61f59e95cb29776fde2d7ae655e758da';
+    const v = 27;
+    //const result2 = await pheasantNetworkDisputeManager.txEcrecover(message, v ,r ,s).estimateGas();
+    const result2 = await pheasantNetworkDisputeManager.txEcrecover.estimateGas(message, v ,r ,s);
+console.log(result2);
+
 /*const encodedtx = Buffer.concat([Buffer.from("02", 'hex'),rlp.encode(list3)])
 const unsignedEncodedtx = Buffer.concat([Buffer.from("02", 'hex'),rlp.encode(list3.slice(0,9))])
 console.log(rlp.encode(list3).toString('hex')); //"こんにちわ" 

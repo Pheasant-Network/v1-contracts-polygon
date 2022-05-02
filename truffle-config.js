@@ -64,7 +64,7 @@ module.exports = {
       timeoutBlocks: 200,
       skipDryRun: true,
       gas: 4500000,
-      gasPrice: 10000000000,
+      //gasPrice: 10000000000,
       chainId: 80001
      },
 	   polygon: {
@@ -72,8 +72,6 @@ module.exports = {
         return new HDWalletProvider(
           process.env.MNEMONIC,
           process.env.PROVIDER_POLYGON,
-          //"https://polygon-rpc.com",
-          ////process.env.PROVIDER_POLYGON,
           0,
           4,
         );
@@ -83,7 +81,7 @@ module.exports = {
       timeoutBlocks: 200,
       skipDryRun: true,
       gas: 4500000,
-      gasPrice: 100000000000,
+      gasPrice: 40000000000,
       chainId:137 
      },
 	   optimism: {
@@ -181,7 +179,7 @@ module.exports = {
       skipDryRun: true,
       network_id: 1,        // Ethereum public network
       gas: 6000000,
-      gasPrice: 20000000000,
+      gasPrice: 40000000000,
     },
 
     // Another network with more advanced options...
