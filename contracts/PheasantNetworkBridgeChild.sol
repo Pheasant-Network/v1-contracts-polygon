@@ -5,8 +5,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {RLPDecoder} from "./RLPDecoder.sol";
 
-//import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-
 interface PheasantNetworkDisputeManagerInterface {
     function verifyBlockHeader(bytes32 blockHash, bytes[] calldata blockHeaderRaw) external pure returns (bool);
 

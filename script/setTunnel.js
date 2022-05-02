@@ -59,11 +59,13 @@ const main = async () => {
 
       const childContract = new web3_polygon.eth.Contract(childAbi , childAddress);
       const rootContract = new web3_mainnet.eth.Contract(rootAbi , rootAddress);
+      const mainnetGasPrice = await web3_mainnet.eth.getGasPrice();
+      const polygonGasPrice = await web3_polygon.eth.getGasPrice();
       let accountNonce = await web3_polygon.eth.getTransactionCount(accounts[0]);
-      let response = await childContract.methods.setFxRootTunnel(rootAddress).send({from:accounts[0], nonce: accountNonce});
+      let response = await childContract.methods.setFxRootTunnel(rootAddress).send({from:accounts[0], nonce: accountNonce, gasPrice: polygonGasPrice});
       console.log(response);
       accountNonce = await web3_mainnet.eth.getTransactionCount(accounts[0]);
-      response = await rootContract.methods.setFxChildTunnel(childAddress).send({from:accounts[0], nonce: accountNonce});
+      response = await rootContract.methods.setFxChildTunnel(childAddress).send({from:accounts[0], nonce: accountNonce, gasPrice: mainnetGasPrice});
       console.log(response);
 
     } else {

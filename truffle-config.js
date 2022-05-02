@@ -30,8 +30,6 @@ module.exports = {
         return new HDWalletProvider(
           process.env.MNEMONIC,
           process.env.PROVIDER_POLYGON,
-          //"https://polygon-rpc.com",
-          ////process.env.PROVIDER_POLYGON,
           0,
           4,
         );
@@ -138,7 +136,7 @@ module.exports = {
       skipDryRun: true,
       network_id: 1, // Ethereum public network
       gas: 6000000,
-      gasPrice: 20000000000,
+      gasPrice: 40000000000,
     },
   },
   mocha: {
