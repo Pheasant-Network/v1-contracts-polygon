@@ -8,11 +8,12 @@ import {RLPDecoder} from "./RLPDecoder.sol";
 interface PheasantNetworkDisputeManagerInterface {
     function verifyBlockHeader(bytes32 blockHash, bytes[] calldata blockHeaderRaw) external pure returns (bool);
 
-    function checkProof(
+    function verifyProof(
+        bytes32 txHash,
         bytes[] memory proof,
         bytes memory bytesRoot,
         uint8[] memory path
-    ) external pure returns (bytes memory);
+    ) external pure returns (bool);
 
     function verifyRawTx(bytes memory transaction, bytes[] calldata txRaw) external pure returns (bool);
 
@@ -203,12 +204,8 @@ contract PheasantNetworkBridgeChild is Ownable {
 
         require(checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee), "Invalid Tx Data");
         require(disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader), "Invalid BlockHeader");
-        bytes memory transaction = disputeManager.checkProof(
-            evidence.txProof,
-            evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX],
-            evidence.path
-        );
-        require(keccak256(transaction) == keccak256(evidence.transaction), "Invalid Tx Proof");
+        require(disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader), "Invalid BlockHeader");
+        require(disputeManager.verifyProof(keccak256(evidence.transaction), evidence.txProof, evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX], evidence.path), "Invalid Tx Proof");
         require(disputeManager.verifyRawTx(evidence.transaction, evidence.rawTx), "Invalid Tx elements");
         require(disputeManager.verifyTxSignature(trade.relayer, evidence.rawTx), "Invalid Tx elements");
         uint256 blockNumber = uint256(RLPDecoder.toUintX(evidence.blockNumber, 0));
