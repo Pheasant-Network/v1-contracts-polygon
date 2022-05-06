@@ -1,5 +1,6 @@
 const TestToken = artifacts.require("TestToken");
 const TestCheckPointManager = artifacts.require("TestCheckPointManager");
+const TestDisputeManager = artifacts.require("TestDisputeManager");
 const PheasantNetworkBridgeChild = artifacts.require("PheasantNetworkBridgeChild");
 const Helper = artifacts.require("Helper");
 const RLPDecoder = artifacts.require("RLPDecoder");
@@ -24,15 +25,17 @@ module.exports = function(deployer, network, accounts) {
       await deployer.link(RLPDecoder, PheasantNetworkBridgeChild);
       await deployer.link(RLPDecoder, Helper);
       await deployer.deploy(TestToken, accounts[0]);
+      await deployer.deploy(TestDisputeManager);
 
       const testToken = await TestToken.deployed();
+      const testDisputeManager = await TestDisputeManager.deployed();
       const tokenAddressList = [
         testToken.address
       ]
 
-      await deployer.deploy(PheasantNetworkBridgeChild, tokenAddressList, userDepositThreshold, disputeManagerContractAddressObj[network].BridgeDisputeManager);
+      await deployer.deploy(PheasantNetworkBridgeChild, tokenAddressList, userDepositThreshold, testDisputeManager.address);
       //return await deployer.deploy(Helper, testToken.address, userDepositThreshold, pheasantNetworkDisputeManager.address);
-      return await deployer.deploy(Helper, tokenAddressList, userDepositThreshold, disputeManagerContractAddressObj[network].BridgeDisputeManager);
+      return await deployer.deploy(Helper, tokenAddressList, userDepositThreshold, testDisputeManager.address);
 
     } else if(network == "mumbai" || network == "polygon") {
       const tokenAddressList = [

@@ -3,7 +3,7 @@ const PheasantNetworkBridgeChild = artifacts.require("PheasantNetworkBridgeChild
 const Helper = artifacts.require("Helper");
 //const DisputeHelper = artifacts.require("DisputeHelper");
 const TestToken = artifacts.require("TestToken");
-const TestCheckPointManager = artifacts.require("TestCheckPointManager");
+const TestDisputeManager = artifacts.require("TestDisputeManager");
 const BN = require('bn.js');
 const Util = require("ethereumjs-util")
 const Web3 = require('web3');
@@ -23,30 +23,26 @@ dotenv.config();
 contract("PheasantNetworkBridgeChild", function (/* accounts */) {
 
   let pheasantNetworkBridgeChild;
-  //let pheasantNetworkDisputeManager;
+  let testDisputeManager;
   let testToken;
-  let testCheckPointManager;
   let accounts;
   let txParams;
   let helper;
   let tokenAddressList;
-  let tempDispute = "0xF5BDF9eF21041A1393238FBF625d0A93BacCA0b4";
   const userDepositThreshold = new BN("30000000000000000000");
   before(async () => {
     accounts = await web3.eth.getAccounts();
     txParams = { from: accounts[0] };
     testToken = await TestToken.new(accounts[0], txParams);
-    testCheckPointManager = await TestCheckPointManager.new();
+    testDisputeManager = await TestDisputeManager.new();
     tokenAddressList = [
       testToken.address
     ]
   });
 
   beforeEach(async () => {
-    //pheasantNetworkDisputeManager = await PheasantNetworkDisputeManager.new(testCheckPointManager.address, txParams);
-    //pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.new(tokenAddressList, userDepositThreshold, pheasantNetworkDisputeManager.address, txParams);
-    pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.new(tokenAddressList, userDepositThreshold, tempDispute, txParams);
-    helper = await Helper.new(tokenAddressList, userDepositThreshold, tempDispute, txParams);
+    pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.new(tokenAddressList, userDepositThreshold, testDisputeManager.address, txParams);
+    helper = await Helper.new(tokenAddressList, userDepositThreshold, testDisputeManager.address, txParams);
   });
 
   it("newTrade", async function () {
@@ -872,7 +868,6 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
       baseFeePerGas: '0x09',
     }*/
 
-    await testCheckPointManager.setBlockHash(6441585, submission.blockHash, {from:accounts[0]});
     //await helper.submitEvidence(accounts[0], 0, submission, blockHeader,rawTx, {from:accounts[1]});
     //await helper.submitEvidence(accounts[0], 0, submission, {from:accounts[1], gas: 8e6, gasPrice: 20e9});
     await helper.submitEvidence(accounts[0], 0, submission, {from:accounts[1] });
