@@ -106,7 +106,7 @@ contract PheasantNetworkBridgeChild is Ownable {
         address to,
         uint256 fee,
         uint8 tokenTypeIndex
-    ) external payable {
+    ) external {
         require(tokenTypeIndex == ETH_TOKEN_INDEX, "Only ETH Support for now");
         IERC20 token = IERC20(tokenAddressL2[tokenTypeIndex]);
         require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
@@ -116,7 +116,7 @@ contract PheasantNetworkBridgeChild is Ownable {
                 trades[msg.sender].length,
                 msg.sender,
                 tokenTypeIndex,
-                tokenTypeIndex == MATIC_TOKEN_INDEX ? msg.value : amount,
+                amount,
                 block.timestamp,
                 to,
                 address(0x0),
@@ -150,7 +150,6 @@ contract PheasantNetworkBridgeChild is Ownable {
         trades[msg.sender][index] = trade;
         IERC20 token = IERC20(tokenAddressL2[trade.tokenTypeIndex]);
         require(token.transfer(msg.sender, trade.amount), "Transfer Fail");
-        //payable(msg.sender).transfer(trade.amount);
     }
 
     function dispute(uint256 index) external {
@@ -203,7 +202,6 @@ contract PheasantNetworkBridgeChild is Ownable {
         require(trade.relayer == msg.sender, "Only Relayer can submit Evidences");
 
         require(checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee), "Invalid Tx Data");
-        require(disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader), "Invalid BlockHeader");
         require(disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader), "Invalid BlockHeader");
         require(disputeManager.verifyProof(keccak256(evidence.transaction), evidence.txProof, evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX], evidence.path), "Invalid Tx Proof");
         require(disputeManager.verifyRawTx(evidence.transaction, evidence.rawTx), "Invalid Tx elements");
@@ -303,7 +301,6 @@ contract PheasantNetworkBridgeChild is Ownable {
             if (trade.status == STATUS_PAID || trade.status == STATUS_CANCEL) continue;
             IERC20 token = IERC20(tokenAddressL2[trade.tokenTypeIndex]);
             if (!token.transfer(trade.user, trade.amount)) return;
-            //payable(trade.user).transfer(trade.amount);
         }
     }
 
@@ -333,7 +330,6 @@ contract PheasantNetworkBridgeChild is Ownable {
 
         IERC20 token = IERC20(tokenAddressL2[trade.tokenTypeIndex]);
         if (!token.transfer(msg.sender, trade.amount)) return;
-        // payable(msg.sender).transfer(trade.amount);
 
         trade.status = STATUS_PAID;
         evidences[user][index] = evidence;
