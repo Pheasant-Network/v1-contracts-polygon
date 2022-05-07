@@ -178,11 +178,9 @@ contract PheasantNetworkBridgeChild is Ownable {
 
         uint256 userDepositAmount = userDeposit[msg.sender];
         userDeposit[msg.sender] = 0;
-        //require(token.transfer(msg.sender, userDepositAmount), "Transfer Fail");
 
         uint256 relayerBondAmount = relayerBond[trade.relayer];
         relayerBond[trade.relayer] = 0;
-        //require(token.transfer(msg.sender, relayerBondAmount), "Transfer Fail");
 
         trade.status = STATUS_SLASHED;
         trades[msg.sender][index] = trade;
