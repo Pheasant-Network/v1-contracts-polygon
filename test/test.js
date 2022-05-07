@@ -646,7 +646,7 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
 
     await testToken.transfer(accounts[1], amount, {from:accounts[0]});
     await testToken.approve(helper.address, amount, {from:accounts[1]});
-    await helper.deposit(amount,{from:accounts[1]});
+    await helper.depositBond(amount,{from:accounts[1]});
     let balance = await testToken.balanceOf(helper.address);
 
     await testToken.approve(helper.address, amount, {from:accounts[0]});
@@ -682,7 +682,7 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
     let userBalance = await helper.getUserDepositBalance(accounts[0]);
     assert.equal(userBalance.toString(), userDepositThreshold.toString())
 
-    let relayerBalance = await helper.getRelayerDepositBalance(accounts[1]);
+    let relayerBalance = await helper.getRelayerBondBalance(accounts[1]);
     assert.equal(relayerBalance.toString(), amount)
 
 
@@ -691,7 +691,7 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
     assert.equal(trade.status, 4)
     userBalance = await helper.getUserDepositBalance(accounts[0]);
     assert.equal(userBalance.toString(), 0)
-    relayerBalance = await helper.getRelayerDepositBalance(accounts[1]);
+    relayerBalance = await helper.getRelayerBondBalance(accounts[1]);
     assert.equal(relayerBalance.toString(), 0)
    
     balance = await testToken.balanceOf(accounts[0]);
@@ -884,7 +884,7 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
   });
 
 
-  it("deposit", async function () {
+  it("depositBond", async function () {
 
     let user = accounts[0];
     let amount = 100000000000000;
@@ -892,39 +892,39 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
     let balance = await testToken.balanceOf(helper.address);
     assert.equal(balance.toString(), 0)
     let userBalance = await testToken.balanceOf(accounts[0]);
-    let relayerBalance = await helper.getRelayerDepositBalance(accounts[0]);
+    let relayerBalance = await helper.getRelayerBondBalance(accounts[0]);
     assert.equal(relayerBalance.toString(), 0)
 
-    await helper.deposit(amount,{from:accounts[0]});
+    await helper.depositBond(amount,{from:accounts[0]});
     balance = await testToken.balanceOf(helper.address);
     assert.equal(balance.toString(), amount)
     balance = await testToken.balanceOf(accounts[0]);
     assert.equal(balance.toString(), userBalance - amount)
 
-    relayerBalance = await helper.getRelayerDepositBalance(accounts[0]);
+    relayerBalance = await helper.getRelayerBondBalance(accounts[0]);
     assert.equal(relayerBalance.toString(), amount)
 
 
 
   });
 
-  it("withdrawDeposit", async function () {
+  it("withdrawBond", async function () {
     let user = accounts[0];
     let amount = 100000000000000;
     await testToken.approve(helper.address, amount, {from:accounts[0]});
     let balance = await testToken.balanceOf(helper.address);
     assert.equal(balance.toString(), 0)
 
-    await helper.deposit(amount,{from:accounts[0]});
+    await helper.depositBond(amount,{from:accounts[0]});
     balance = await testToken.balanceOf(helper.address);
     assert.equal(balance.toString(), amount)
-    let relayerBalance = await helper.getRelayerDepositBalance(accounts[0]);
+    let relayerBalance = await helper.getRelayerBondBalance(accounts[0]);
     assert.equal(relayerBalance.toString(), amount)
 
-    await helper.withdrawDeposit({from:accounts[0]});
+    await helper.withdrawBond({from:accounts[0]});
     balance = await testToken.balanceOf(helper.address);
     assert.equal(balance.toString(), 0)
-    relayerBalance = await helper.getRelayerDepositBalance(accounts[0]);
+    relayerBalance = await helper.getRelayerBondBalance(accounts[0]);
     assert.equal(relayerBalance.toString(), 0)
   });
 

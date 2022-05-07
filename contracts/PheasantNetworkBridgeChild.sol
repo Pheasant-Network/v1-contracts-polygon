@@ -56,7 +56,7 @@ contract PheasantNetworkBridgeChild is Ownable {
     uint256 internal userDepositThreshold;
     mapping(address => Trade[]) internal trades;
     mapping(address => mapping(uint256 => Evidence)) internal evidences;
-    mapping(address => uint256) internal relayerDeposit;
+    mapping(address => uint256) internal relayerBond;
     mapping(address => uint256) internal userDeposit;
     //uint constant SUBMIT_LIMIT_BLOCK_INTERVAL = 150; //approximately 30 min.
 
@@ -182,9 +182,9 @@ contract PheasantNetworkBridgeChild is Ownable {
         userDeposit[msg.sender] = 0;
         require(token.transfer(msg.sender, userDepositAmount), "Transfer Fail");
 
-        uint256 relayerDepositAmount = relayerDeposit[trade.relayer];
-        relayerDeposit[trade.relayer] = 0;
-        require(token.transfer(msg.sender, relayerDepositAmount), "Transfer Fail");
+        uint256 relayerBondAmount = relayerBond[trade.relayer];
+        relayerBond[trade.relayer] = 0;
+        require(token.transfer(msg.sender, relayerBondAmount), "Transfer Fail");
 
         trade.status = STATUS_SLASHED;
         trades[msg.sender][index] = trade;
@@ -263,24 +263,24 @@ contract PheasantNetworkBridgeChild is Ownable {
         return trades[user].length >= index + 1;
     }
 
-    function getRelayerDepositBalance(address account) external view returns (uint256) {
-        return relayerDeposit[account];
+    function getRelayerBondBalance(address account) external view returns (uint256) {
+        return relayerBond[account];
     }
 
     function getUserDepositBalance(address account) external view returns (uint256) {
         return userDeposit[account];
     }
 
-    function deposit(uint256 amount) external {
+    function depositBond(uint256 amount) external {
         IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
         require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
-        relayerDeposit[msg.sender] = relayerDeposit[msg.sender].add(amount);
+        relayerBond[msg.sender] = relayerBond[msg.sender].add(amount);
     }
 
-    function withdrawDeposit() external {
+    function withdrawBond() external {
         IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
-        uint256 amount = relayerDeposit[msg.sender];
-        relayerDeposit[msg.sender] = 0;
+        uint256 amount = relayerBond[msg.sender];
+        relayerBond[msg.sender] = 0;
         require(token.transfer(msg.sender, amount), "Transfer Fail");
     }
 
@@ -308,7 +308,7 @@ contract PheasantNetworkBridgeChild is Ownable {
     }
 
     function bulkBid(UserTrade[] calldata userTrades) external onlyOwner {
-        //require(getRelayerDepositBalance(msg.sender) >= 100); //TODO
+        //require(getRelayerBondBalance(msg.sender) >= 100); //TODO
         for (uint256 i = 0; i < userTrades.length; i++) {
             bid(userTrades[i].userAddress, userTrades[i].index);
         }

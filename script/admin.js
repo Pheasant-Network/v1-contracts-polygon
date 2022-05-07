@@ -38,13 +38,13 @@ const main = async () => {
   if(sendOrReceive == "d") {
     let response = await tokenContract.methods.approve(address, approveAmount).send({from:accounts[0]});
     console.log(response);
-    response = await bridgeContract.methods.deposit(approveAmount).send({from:accounts[0]});
+    response = await bridgeContract.methods.depositBond(approveAmount).send({from:accounts[0]});
     console.log(response);
   } else if(sendOrReceive == "w") {
-    response = await bridgeContract.methods.withdrawDeposit().send({from:accounts[0]});
+    response = await bridgeContract.methods.withdrawBond().send({from:accounts[0]});
     console.log(response);
   } else if(sendOrReceive == "b") {
-    let response = await bridgeContract.methods.getChangerDepositBalance(accounts[0]).call();
+    let response = await bridgeContract.methods.getRelayerBondBalance(accounts[0]).call();
     console.log(response);
   }
  
