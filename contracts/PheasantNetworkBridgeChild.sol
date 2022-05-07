@@ -108,9 +108,6 @@ contract PheasantNetworkBridgeChild is Ownable {
         uint8 tokenTypeIndex
     ) external {
         require(tokenTypeIndex == ETH_TOKEN_INDEX, "Only ETH Support for now");
-        IERC20 token = IERC20(tokenAddressL2[tokenTypeIndex]);
-        require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
-
         trades[msg.sender].push(
             Trade(
                 trades[msg.sender].length,
@@ -127,8 +124,10 @@ contract PheasantNetworkBridgeChild is Ownable {
         );
 
         userTradeList.push(UserTrade(msg.sender, trades[msg.sender].length - 1));
-
         emit NewTrade(msg.sender, tokenTypeIndex, amount);
+
+        IERC20 token = IERC20(tokenAddressL2[tokenTypeIndex]);
+        require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
     }
 
     function setUserDepositThreshold(uint256 threshold) external onlyOwner {
@@ -158,8 +157,6 @@ contract PheasantNetworkBridgeChild is Ownable {
         require(trade.status == STATUS_PAID);
         require(trade.timestamp.add(DISPUTABLE_PERIOD) > block.timestamp);
 
-        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
-        require(token.transferFrom(msg.sender, address(this), userDepositThreshold), "Transfer Fail");
         userDeposit[msg.sender] = userDeposit[msg.sender].add(userDepositThreshold);
 
         trade.status = STATUS_DISPUTE;
@@ -168,6 +165,9 @@ contract PheasantNetworkBridgeChild is Ownable {
         disputeList[trade.relayer].push(UserTrade(msg.sender, index));
 
         emit Dispute(msg.sender, index);
+
+        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+        require(token.transferFrom(msg.sender, address(this), userDepositThreshold), "Transfer Fail");
     }
 
     function slash(uint256 index) external {
@@ -176,19 +176,19 @@ contract PheasantNetworkBridgeChild is Ownable {
         require(trade.status == STATUS_DISPUTE);
         require(trade.disputeTimestamp.add(GRACE_PERIOD) < block.timestamp);
 
-        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
         uint256 userDepositAmount = userDeposit[msg.sender];
         userDeposit[msg.sender] = 0;
-        require(token.transfer(msg.sender, userDepositAmount), "Transfer Fail");
 
         uint256 relayerBondAmount = relayerBond[trade.relayer];
         relayerBond[trade.relayer] = 0;
-        require(token.transfer(msg.sender, relayerBondAmount), "Transfer Fail");
 
         trade.status = STATUS_SLASHED;
         trades[msg.sender][index] = trade;
 
         emit Slash(msg.sender, index, trade.relayer);
+
+        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+        require(token.transfer(msg.sender, userDepositAmount.add(relayerBondAmount)), "Transfer Fail");
     }
 
     function submitEvidence(
@@ -270,15 +270,15 @@ contract PheasantNetworkBridgeChild is Ownable {
     }
 
     function depositBond(uint256 amount) external {
+        relayerBond[msg.sender] = relayerBond[msg.sender].add(amount);
         IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
         require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
-        relayerBond[msg.sender] = relayerBond[msg.sender].add(amount);
     }
 
     function withdrawBond() external {
-        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
         uint256 amount = relayerBond[msg.sender];
         relayerBond[msg.sender] = 0;
+        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
         require(token.transfer(msg.sender, amount), "Transfer Fail");
     }
 
@@ -328,14 +328,15 @@ contract PheasantNetworkBridgeChild is Ownable {
         if (trade.relayer != msg.sender) return;
         if (!checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee)) return;
 
-        IERC20 token = IERC20(tokenAddressL2[trade.tokenTypeIndex]);
-        if (!token.transfer(msg.sender, trade.amount)) return;
-
         trade.status = STATUS_PAID;
         evidences[user][index] = evidence;
         trades[user][index] = trade;
 
         emit Withdraw(msg.sender, user, index);
+
+        IERC20 token = IERC20(tokenAddressL2[trade.tokenTypeIndex]);
+        if (!token.transfer(msg.sender, trade.amount)) return;
+
     }
 
     function checkTransferTx(
