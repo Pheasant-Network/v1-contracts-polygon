@@ -142,7 +142,6 @@ contract PheasantNetworkBridgeChild is Ownable {
     }
 
     function cancelTrade(uint256 index) external {
-        require(isTradeExist(msg.sender, index));
         Trade memory trade = getTrade(msg.sender, index);
         require(trade.status == STATUS_START);
         trade.status = STATUS_CANCEL;
@@ -152,7 +151,6 @@ contract PheasantNetworkBridgeChild is Ownable {
     }
 
     function dispute(uint256 index) external {
-        require(isTradeExist(msg.sender, index));
         Trade memory trade = getTrade(msg.sender, index);
         require(trade.status == STATUS_PAID);
         require(trade.timestamp.add(DISPUTABLE_PERIOD) > block.timestamp);
@@ -171,7 +169,6 @@ contract PheasantNetworkBridgeChild is Ownable {
     }
 
     function slash(uint256 index) external {
-        require(isTradeExist(msg.sender, index));
         Trade memory trade = getTrade(msg.sender, index);
         require(trade.status == STATUS_DISPUTE);
         require(trade.disputeTimestamp.add(GRACE_PERIOD) < block.timestamp);
@@ -196,7 +193,6 @@ contract PheasantNetworkBridgeChild is Ownable {
         uint256 index,
         Evidence calldata evidence
     ) external {
-        require(isTradeExist(user, index), "Trade Doesn't Exist");
         Trade memory trade = getTrade(user, index);
         require(trade.status == STATUS_DISPUTE, "Invalid Status");
         require(trade.relayer == msg.sender, "Only Relayer can submit Evidences");
