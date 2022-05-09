@@ -1,0 +1,23 @@
+[
+  {
+    "recipient": "0xb0E426B1A0B8BA474Dc5c8F6493B3E63D7121626",
+    "amount": 10000,
+    "fee": 100
+  },
+  {
+    "recipient": 0,
+    "amount": 20000,
+    "fee": 200
+  },
+  {
+    "recipient": "0xb0E426B1A0B8BA474Dc5c8F6493B3E63D7121626",
+    "amount": 100000010000000,
+    "fee": 10000000
+  },
+  {
+    "recipient": "0xb0E426B1A0B8BA474Dc5c8F6493B3E63D7121626",
+    "amount": 100000010000000,
+    "fee": 1000000
+  }
+
+]
