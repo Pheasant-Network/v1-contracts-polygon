@@ -143,7 +143,7 @@ contract PheasantNetworkBridgeChild is Ownable {
 
     function cancelTrade(uint256 index) external {
         Trade memory trade = getTrade(msg.sender, index);
-        require(trade.status == STATUS_START);
+        require(trade.status == STATUS_START, "Can't cancel after bidding");
         trade.status = STATUS_CANCEL;
         trades[msg.sender][index] = trade;
         IERC20 token = IERC20(tokenAddressL2[trade.tokenTypeIndex]);
@@ -219,8 +219,7 @@ contract PheasantNetworkBridgeChild is Ownable {
         return disputeList[msg.sender];
     }
 
-    function getTrade(address user, uint256 index) public view returns (Trade memory) {
-        require(isTradeExist(user, index));
+    function getTrade(address user, uint256 index) public isTradeExist(user, index) view returns (Trade memory) {
         return trades[user][index];
     }
 
@@ -253,8 +252,9 @@ contract PheasantNetworkBridgeChild is Ownable {
         return trades[msg.sender];
     }
 
-    function isTradeExist(address user, uint256 index) internal view returns (bool) {
-        return trades[user].length >= index + 1;
+    modifier isTradeExist(address user, uint256 index) {
+        require(trades[user].length >= index + 1, "No Trade Exists");
+        _;
     }
 
     function getRelayerBondBalance(address account) external view returns (uint256) {

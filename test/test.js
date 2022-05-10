@@ -6,7 +6,7 @@ const BN = require('bn.js');
 const Util = require("ethereumjs-util")
 const Web3 = require('web3');
 const rlp = require('rlp');
-const {time} = require('@openzeppelin/test-helpers');
+const { time, expectRevert } = require('@openzeppelin/test-helpers');
 const { EthereumProof } = require("ethereum-proof");
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 const dotenv = require('dotenv');
@@ -64,6 +64,26 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
   });
 
 
+  it("newTrade invalid tokeyTypeIndex", async function () {
+
+    const testTradeData = testData.getTradeData(4);
+    await testToken.approve(pheasantNetworkBridgeChild.address, testTradeData.amount, {from:accounts[0]});
+    await expectRevert(
+      pheasantNetworkBridgeChild.newTrade(testTradeData.amount, testTradeData.recipient, testTradeData.fee, testTradeData.tokenTypeIndex,  {from:accounts[0]}),
+      "Only ETH Support for now"
+    );
+
+
+  });
+
+  it("getTrade No Trade Error", async function () {
+    await expectRevert(
+      pheasantNetworkBridgeChild.getTrade(accounts[0], 0),
+      "No Trade Exists"
+    );
+  });
+
+
   it("getTrades", async function () {
 
     const testTradeData = testData.getTradeData(0);
@@ -96,18 +116,6 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
     assert.equal(trades[1].relayer, "0x0000000000000000000000000000000000000000")
     assert.equal(trades[1].status, "0")
 
-  });
-
-  it("isTradeExist", async function () {
-
-    const testTradeData = testData.getTradeData(0);
-    let isTradeExist = await helper.helperIsTradeExist(accounts[0], 0);
-    assert.equal(isTradeExist, false)
-    await testToken.approve(helper.address, testTradeData.amount, {from:accounts[0]});
-    await helper.newTrade(testTradeData.amount, testTradeData.recipient, testTradeData.fee, 0,  {from:accounts[0]});
-
-    isTradeExist = await helper.helperIsTradeExist(accounts[0], 0);
-    assert.equal(isTradeExist, true)
   });
 
   it("bid", async function () {
@@ -372,8 +380,30 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
     let afterBalance = await testToken.balanceOf(accounts[0]);
     assert.equal(initialBalance.toString(), afterBalance.toString())
 
+  });
+
+  it("cancelTrade can't cancel after bidding", async function () {
+
+    const testTradeData = testData.getTradeData(2);
+    let initialBalance = await testToken.balanceOf(accounts[0]);
+
+    await testToken.approve(helper.address, testTradeData.amount, {from:accounts[0]});
+    await helper.newTrade(testTradeData.amount, testTradeData.recipient, testTradeData.fee, 0,  {from:accounts[0]});
+    
+    let trade = await helper.getTrade(accounts[0], 0);
+    assert.equal(trade.index, 0)
+    assert.equal(trade.status, "0")
+
+    await helper.helperBid(accounts[0], 0, {from:accounts[0]});
+
+    await expectRevert(
+      helper.cancelTrade(0, {from:accounts[0], gas: 500000}),
+      "Can't cancel after bidding"
+    );
+
 
   });
+
 
   it("getUserTradeListByIndex", async function () {
 

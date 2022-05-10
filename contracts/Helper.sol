@@ -9,10 +9,6 @@ contract Helper is PheasantNetworkBridgeChild {
         address _disputeManager
     ) PheasantNetworkBridgeChild(_tokenAddressList, _userDepositThreshold, _disputeManager) {}
 
-    function helperIsTradeExist(address user, uint256 index) public view returns (bool) {
-        return super.isTradeExist(user, index);
-    }
-
     function helperBid(address user, uint256 index) public {
         super.bid(user, index);
     }
