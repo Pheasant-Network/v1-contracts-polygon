@@ -220,7 +220,6 @@ contract PheasantNetworkBridgeChild is Ownable {
     }
 
     function getTrade(address user, uint256 index) public isTradeExist(user, index) view returns (Trade memory) {
-        //require(isTradeExist(user, index), "No Trade Exists");
         return trades[user][index];
     }
 
@@ -253,10 +252,8 @@ contract PheasantNetworkBridgeChild is Ownable {
         return trades[msg.sender];
     }
 
-    //function isTradeExist(address user, uint256 index) internal view returns (bool) {
     modifier isTradeExist(address user, uint256 index) {
         require(trades[user].length >= index + 1, "No Trade Exists");
-        //return trades[user].length >= index + 1;
         _;
     }
 
