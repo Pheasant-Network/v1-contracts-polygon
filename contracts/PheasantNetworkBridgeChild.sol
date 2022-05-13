@@ -152,8 +152,8 @@ contract PheasantNetworkBridgeChild is Ownable {
 
     function dispute(uint256 index) external {
         Trade memory trade = getTrade(msg.sender, index);
-        require(trade.status == STATUS_PAID);
-        require(trade.timestamp.add(DISPUTABLE_PERIOD) > block.timestamp);
+        require(trade.status == STATUS_PAID, "Can't dispute before withdraw");
+        require(trade.timestamp.add(DISPUTABLE_PERIOD) > block.timestamp, "Disputes must run within one hour of withdrawal");
 
         userDeposit[msg.sender] = userDeposit[msg.sender].add(userDepositThreshold);
 
@@ -170,8 +170,8 @@ contract PheasantNetworkBridgeChild is Ownable {
 
     function slash(uint256 index) external {
         Trade memory trade = getTrade(msg.sender, index);
-        require(trade.status == STATUS_DISPUTE);
-        require(trade.disputeTimestamp.add(GRACE_PERIOD) < block.timestamp);
+        require(trade.status == STATUS_DISPUTE, "Slashes must run after dispute");
+        require(trade.disputeTimestamp.add(GRACE_PERIOD) < block.timestamp, "A certain time must elapse after dispute");
 
         uint256 userDepositAmount = userDeposit[msg.sender];
         userDeposit[msg.sender] = 0;

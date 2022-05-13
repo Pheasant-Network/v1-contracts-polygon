@@ -1,5 +1,5 @@
-[
- {
+{
+ "0" : {
    "blockNumber": "0x5ed90c",
    "blockHash": "0xd792952703adf456f92a4298f396da0fc5f771afd2082b46c9c5b2118e10db1c",
    "txReceiptProof": [],
@@ -11,7 +11,7 @@
    "rawTx": [],
    "rawBlockHeader": []
  },
- {
+ "1" : {
    "blockNumber": "0x624a71",
    "blockHash": "0x162f57008b0727797b4e02e4308a3ecb920f6fe534efb3b5cf548e421604a7b0",
    "txReceiptProof": [],
@@ -24,7 +24,7 @@
    "rawBlockHeader": []
 
  },
- { 
+ "2" : { 
 
    "blockNumber": "0x624a71",
    "blockHash": "0x162f57008b0727797b4e02e4308a3ecb920f6fe534efb3b5cf548e421604a7b0",
@@ -73,4 +73,4 @@
       "0x09"
     ]
  }
-]
+}
