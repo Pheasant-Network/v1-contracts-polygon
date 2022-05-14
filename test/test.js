@@ -164,7 +164,7 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
   it("bid Can't re-bid", async function () {
     const testTradeData = testData.getTradeData(5);
     await testData.setUpTrade(testTradeData, 0);
-    await helper.helperBid(testTradeData.user, testTradeData.index, {from:accounts[1]});
+    await helper.helperBid(testTradeData.user, testTradeData.index, {from:accounts[0]});
     trade = await helper.getTrade(testTradeData.user, testTradeData.index);
     assert.equal(trade.relayer, testTradeData.relayer)
   });
@@ -194,6 +194,34 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
     tradeAssert(expectedData, trade, false);
 
   });
+
+
+  it("bulkBid invalid status", async function () {
+
+    const testTradeData = testData.getTradeData(0);
+    const testTradeData2 = testData.getTradeData(20);
+    await testData.setUpTrade(testTradeData, 0);
+    await testData.setUpTrade(testTradeData2, 0);
+    const userTrades = [
+      {userAddress: testTradeData.user, index: testTradeData.index},
+      {userAddress: testTradeData2.user, index: testTradeData2.index}
+    ]
+
+    await helper.bulkBid(userTrades , {from:accounts[0]});
+    let trade = await helper.getTrade(testTradeData.user, testTradeData.index);
+    let expectedData = testTradeData
+    expectedData.status = "1"
+    expectedData.relayer = accounts[0]
+    tradeAssert(expectedData, trade, false);
+
+    trade = await helper.getTrade(testTradeData2.user, testTradeData2.index);
+    expectedData = testTradeData2
+    expectedData.status = "1"
+    expectedData.relayer = accounts[1]
+    tradeAssert(expectedData, trade, false);
+
+  });
+
 
   it("checkTransferTx", async function () {
 
@@ -225,14 +253,15 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
     await testData.setUpTrade(testTradeData, 0, true);
     const evidence = testData.getEvidenceData(0);
 
-    await helper.helperWithdraw(testTradeData.user, testTradeData.index, evidence,{from:accounts[1]});
+    const InitialBalance = await testToken.balanceOf(accounts[0]);
+    await helper.helperWithdraw(testTradeData.user, testTradeData.index, evidence,{from:accounts[0]});
     const trade = await helper.getTrade(testTradeData.user, testTradeData.index);
     const expectedData = testTradeData
     expectedData.status = "2"
     tradeAssert(expectedData, trade, false);
 
-    const balance = await testToken.balanceOf(testTradeData.relayer);
-    assert.equal(balance.toNumber(), testTradeData.amount)
+    const balance = await testToken.balanceOf(accounts[0]);
+    assert.equal(balance.toString(), InitialBalance.add(new BN(testTradeData.amount)).toString())
 
 
   });
@@ -242,13 +271,15 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
     const testTradeData = testData.getTradeData(3); //not enough amount transaction
     await testData.setUpTrade(testTradeData, 0, true);
     const evidence = testData.getEvidenceData(0);
-    await helper.helperWithdraw(accounts[0], 0, evidence,{from:accounts[2]});
+
+    const InitialBalance = await testToken.balanceOf(testTradeData.relayer);
+    await helper.helperWithdraw(accounts[0], 0, evidence,{from:accounts[0]});
     const trade = await helper.getTrade(accounts[0], 0);
     const expectedData = testTradeData
     expectedData.status = "1"
     tradeAssert(expectedData, trade, false);
-    const balance = await testToken.balanceOf(accounts[2]);
-    assert.equal(balance.toNumber(), 0)
+    const balance = await testToken.balanceOf(testTradeData.relayer);
+    assert.equal(balance.toString(), InitialBalance.toString())
 
   });
 
@@ -258,26 +289,28 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
     await testData.setUpTrade(testTradeData, 0, true);
     //NO BID
     const evidence = testData.getEvidenceData(0);
-    await helper.helperWithdraw(accounts[0], 0, evidence,{from:accounts[2]});
+    await helper.helperWithdraw(accounts[0], 0, evidence,{from:accounts[0]});
     const trade = await helper.getTrade(accounts[0], 0);
     tradeAssert(testTradeData, trade, false);
 
     const balance = await testToken.balanceOf(accounts[2]);
-    assert.equal(balance.toNumber(), 0)
+    assert.equal(balance.toString(), 0)
 
   });
 
   it("withdraw invalid relayer", async function () {
 
-    const testTradeData = testData.getTradeData(2);
+    const testTradeData = testData.getTradeData(21);
     await testData.setUpTrade(testTradeData, 0, true);
     const evidence = testData.getEvidenceData(0);
-    await helper.helperWithdraw(accounts[0], 0, evidence,{from:accounts[3]}); //invalid Relayer
+
+    const InitialBalance = await testToken.balanceOf(accounts[0]);
+    await helper.helperWithdraw(accounts[0], 0, evidence,{from:accounts[0]}); //invalid Relayer
     const trade = await helper.getTrade(accounts[0], 0);
 
     tradeAssert(testTradeData, trade, false);
-    const balance = await testToken.balanceOf(accounts[3]);
-    assert.equal(balance.toNumber(), 0)
+    const balance = await testToken.balanceOf(accounts[0]);
+    assert.equal(balance.toString(), InitialBalance.toString())
 
   });
 
@@ -310,6 +343,37 @@ contract("PheasantNetworkBridgeChild", function (/* accounts */) {
 
 
   });
+
+  it("bulkWithdraw invalid status", async function () {
+
+    const testTradeData = testData.getTradeData(8);
+    const testTradeData2 = testData.getTradeData(22);
+    await testData.setUpTrade(testTradeData, 0, true);
+    await testData.setUpTrade(testTradeData2, 0, true);
+    const userTrades = [
+      {userAddress: testTradeData.user, index: testTradeData.index},
+      {userAddress: testTradeData2.user, index: testTradeData2.index}
+    ]
+
+    const evidences = [
+      testData.getEvidenceData(0),
+      testData.getEvidenceData(0)
+    ]
+
+    await helper.bulkWithdraw(userTrades , evidences, {from:accounts[0]});
+    trade = await helper.getTrade(testTradeData.user, testTradeData.index);
+    const expectedData = testTradeData
+    expectedData.status = "2"
+    tradeAssert(expectedData, trade, false);
+
+    trade = await helper.getTrade(testTradeData2.user, testTradeData2.index);
+    const expectedData2 = testTradeData2
+    expectedData2.status = "2"
+    tradeAssert(expectedData2, trade, false);
+
+
+  });
+
 
   it("cancelTrade", async function () {
 
