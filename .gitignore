@@ -4,3 +4,10 @@ node_modules
 index.mjs
 .env
 *.swp
+coverage
+coverage.json
+typechain
+
+#Hardhat files
+cache
+artifacts
