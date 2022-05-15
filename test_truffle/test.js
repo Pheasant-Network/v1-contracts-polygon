@@ -1,54 +1,48 @@
-const { expect, assert } = require("chai");
-const { ethers } = require("hardhat");
+const PheasantNetworkBridgeChild = artifacts.require("PheasantNetworkBridgeChild");
+const Helper = artifacts.require("Helper");
+const TestToken = artifacts.require("TestToken");
+const TestDisputeManager = artifacts.require("TestDisputeManager");
 const BN = require('bn.js');
-const userDepositThreshold = "30000000000000000000";
+const Util = require("ethereumjs-util")
+const Web3 = require('web3');
+const rlp = require('rlp');
 const { time, expectRevert } = require('@openzeppelin/test-helpers');
+const { EthereumProof } = require("ethereum-proof");
+const HDWalletProvider = require("@truffle/hdwallet-provider");
+const dotenv = require('dotenv');
 const TestData = require('./utils.js');
+dotenv.config();
 
-describe("PheasantNetworkBridgeChild", function () {
+/*
+ * uncomment accounts to access the test accounts made available by the
+ * Ethereum client
+ * See docs: https://www.trufflesuite.com/docs/truffle/testing/writing-tests-in-javascript
+ */
+
+contract("PheasantNetworkBridgeChild", function (/* accounts */) {
 
   let pheasantNetworkBridgeChild;
-  let TestDisputeManager;
   let testDisputeManager;
-  let TestToken;
   let testToken;
-  let RLPDecoder;
-  let rlpDecoder;
   let accounts;
   let txParams;
   let helper;
   let tokenAddressList;
   let testData;
+  const userDepositThreshold = new BN("30000000000000000000");
   before(async () => {
-    TestToken = await hre.ethers.getContractFactory("TestToken");
-    RLPDecoder = await hre.ethers.getContractFactory("RLPDecoder");
-    TestDisputeManager = await hre.ethers.getContractFactory("TestDisputeManager");
-    rlpDecoder = await RLPDecoder.deploy();
-    accounts =  await ethers.getSigners();
-    testDisputeManager = await TestDisputeManager.connect(accounts[0]).deploy();
+    accounts = await web3.eth.getAccounts();
+    txParams = { from: accounts[0] };
+    testDisputeManager = await TestDisputeManager.new();
   });
 
   beforeEach(async () => {
-    testToken = await TestToken.connect(accounts[0]).deploy(accounts[0].address);
+    testToken = await TestToken.new(accounts[0], txParams);
     tokenAddressList = [
       testToken.address
     ]
-
-    const PheasantNetworkBridgeChild = await hre.ethers.getContractFactory("PheasantNetworkBridgeChild", {
-      libraries: {
-        RLPDecoder: rlpDecoder.address,
-      },
-    });
-
-    pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.connect(accounts[0]).deploy(tokenAddressList, userDepositThreshold.toString(), testDisputeManager.address);
-
-    const Helper = await hre.ethers.getContractFactory("Helper", {
-      libraries: {
-        RLPDecoder: rlpDecoder.address,
-      },
-    });
-    helper = await Helper.deploy(tokenAddressList, userDepositThreshold.toString(), testDisputeManager.address);
-
+    pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.new(tokenAddressList, userDepositThreshold, testDisputeManager.address, txParams);
+    helper = await Helper.new(tokenAddressList, userDepositThreshold, testDisputeManager.address, txParams);
     testData = new TestData(accounts, helper, testToken);
   });
 
@@ -61,14 +55,20 @@ describe("PheasantNetworkBridgeChild", function () {
 
   it("setUpEvidence", async function () {
     const evidence = testData.getEvidenceData(0);
-    await testData.setUpEvidence(accounts[0].address, 0, evidence, 0);
-    const setUpData = await helper.getEvidence(accounts[0].address, 0);
+    await testData.setUpEvidence(accounts[0], 0, evidence, 0);
+    const setUpData = await helper.getEvidence(accounts[0], 0);
     assert.equal(evidence.blockNumber, setUpData.blockNumber);
     assert.equal(evidence.blockHash, setUpData.blockHash);
     assert.equal(evidence.transaction, setUpData.transaction);
 
-    assert.deepEqual(evidence.txDataSpot, setUpData.txDataSpot);
-    assert.deepEqual(evidence.path, setUpData.path);
+    const expectedTxDataSpot = evidence.txDataSpot.map((item) => {
+      return String(item);
+    });
+    assert.deepEqual(expectedTxDataSpot, setUpData.txDataSpot);
+    const expectedPath = evidence.path.map((item) => {
+      return String(item);
+    });
+    assert.deepEqual(expectedPath, setUpData.path);
     assert.equal(evidence.txReceipt, setUpData.txReceipt);
   });
 
@@ -77,7 +77,7 @@ describe("PheasantNetworkBridgeChild", function () {
     const testBondData = testData.getBondData(0);
 
     await testData.setUpBalance(testBondData.bond, 2);
-    const balance = await testToken.balanceOf(accounts[2].address);
+    const balance = await testToken.balanceOf(accounts[2]);
     assert.equal(balance.toString(), String(testBondData.bond));
   });
 
@@ -86,7 +86,7 @@ describe("PheasantNetworkBridgeChild", function () {
     await testData.setUpBond(testBondData.bond, 0);
     const balance = await testToken.balanceOf(helper.address);
     assert.equal(balance.toString(), String(testBondData.bond));
-    const bondBalance = await helper.getRelayerBondBalance(accounts[0].address);
+    const bondBalance = await helper.getRelayerBondBalance(accounts[0]);
     assert.equal(bondBalance.toString(), String(testBondData.bond));
 
   });
@@ -96,16 +96,17 @@ describe("PheasantNetworkBridgeChild", function () {
     await testData.setUpUserDeposit(amount, 0);
     const balance = await testToken.balanceOf(helper.address);
     assert.equal(balance.toString(), String(amount));
-    const bondBalance = await helper.getUserDepositBalance(accounts[0].address);
+    const bondBalance = await helper.getUserDepositBalance(accounts[0]);
     assert.equal(bondBalance.toString(), String(amount));
   });
+
 
   it("newTrade", async function () {
 
     const testTradeData = testData.getTradeData(0);
-    await testToken.connect(accounts[0]).approve(pheasantNetworkBridgeChild.address, testTradeData.amount);
-    await pheasantNetworkBridgeChild.connect(accounts[0]).newTrade(testTradeData.amount, testTradeData.to, testTradeData.fee, testTradeData.tokenTypeIndex);
-    const trade = await pheasantNetworkBridgeChild.getTrade(accounts[0].address, 0);
+    await testToken.approve(pheasantNetworkBridgeChild.address, testTradeData.amount, {from:accounts[0]});
+    await pheasantNetworkBridgeChild.newTrade(testTradeData.amount, testTradeData.to, testTradeData.fee, testTradeData.tokenTypeIndex,  {from:accounts[0]});
+    const trade = await pheasantNetworkBridgeChild.getTrade(accounts[0], 0);
     tradeAssert(testTradeData, trade, false);
   });
 
@@ -113,9 +114,9 @@ describe("PheasantNetworkBridgeChild", function () {
   it("newTrade invalid tokeyTypeIndex", async function () {
 
     const testTradeData = testData.getTradeData(4);
-    await testToken.connect(accounts[0]).approve(pheasantNetworkBridgeChild.address, testTradeData.amount);
+    await testToken.approve(pheasantNetworkBridgeChild.address, testTradeData.amount, {from:accounts[0]});
     await expectRevert(
-      pheasantNetworkBridgeChild.connect(accounts[0]).newTrade(testTradeData.amount, testTradeData.to, testTradeData.fee, testTradeData.tokenTypeIndex),
+      pheasantNetworkBridgeChild.newTrade(testTradeData.amount, testTradeData.to, testTradeData.fee, testTradeData.tokenTypeIndex,  {from:accounts[0]}),
       "Only ETH Support for now"
     );
 
@@ -124,7 +125,7 @@ describe("PheasantNetworkBridgeChild", function () {
 
   it("getTrade No Trade Error", async function () {
     await expectRevert(
-      pheasantNetworkBridgeChild.getTrade(accounts[0].address, 0),
+      pheasantNetworkBridgeChild.getTrade(accounts[0], 0),
       "No Trade Exists"
     );
   });
@@ -146,17 +147,16 @@ describe("PheasantNetworkBridgeChild", function () {
     tradeAssert(testTradeData2, trades[1], false);
   });
 
-
   it("bid", async function () {
 
     const testTradeData = testData.getTradeData(0);
     await testData.setUpTrade(testTradeData, 0);
 
-    await helper.connect(accounts[0]).helperBid(accounts[0].address, 0);
-    const trade = await helper.connect(accounts[0]).getTrade(accounts[0].address, 0);
+    await helper.helperBid(accounts[0], 0, {from:accounts[0]});
+    const trade = await helper.getTrade(accounts[0], 0);
     const expectedData = testTradeData
     expectedData.status = "1"
-    expectedData.relayer = accounts[0].address
+    expectedData.relayer = accounts[0]
     tradeAssert(expectedData, trade, false);
 
   });
@@ -164,7 +164,7 @@ describe("PheasantNetworkBridgeChild", function () {
   it("bid Can't re-bid", async function () {
     const testTradeData = testData.getTradeData(5);
     await testData.setUpTrade(testTradeData, 0);
-    await helper.connect(accounts[0]).helperBid(testTradeData.user, testTradeData.index);
+    await helper.helperBid(testTradeData.user, testTradeData.index, {from:accounts[0]});
     trade = await helper.getTrade(testTradeData.user, testTradeData.index);
     assert.equal(trade.relayer, testTradeData.relayer)
   });
@@ -180,17 +180,17 @@ describe("PheasantNetworkBridgeChild", function () {
       {userAddress: testTradeData2.user, index: testTradeData2.index}
     ]
 
-    await helper.connect(accounts[0]).bulkBid(userTrades);
+    await helper.bulkBid(userTrades , {from:accounts[0]});
     let trade = await helper.getTrade(testTradeData.user, testTradeData.index);
     let expectedData = testTradeData
     expectedData.status = "1"
-    expectedData.relayer = accounts[0].address
+    expectedData.relayer = accounts[0]
     tradeAssert(expectedData, trade, false);
 
     trade = await helper.getTrade(testTradeData2.user, testTradeData2.index);
     expectedData = testTradeData2
     expectedData.status = "1"
-    expectedData.relayer = accounts[0].address
+    expectedData.relayer = accounts[0]
     tradeAssert(expectedData, trade, false);
 
   });
@@ -207,17 +207,17 @@ describe("PheasantNetworkBridgeChild", function () {
       {userAddress: testTradeData2.user, index: testTradeData2.index}
     ]
 
-    await helper.connect(accounts[0]).bulkBid(userTrades);
+    await helper.bulkBid(userTrades , {from:accounts[0]});
     let trade = await helper.getTrade(testTradeData.user, testTradeData.index);
     let expectedData = testTradeData
     expectedData.status = "1"
-    expectedData.relayer = accounts[0].address
+    expectedData.relayer = accounts[0]
     tradeAssert(expectedData, trade, false);
 
     trade = await helper.getTrade(testTradeData2.user, testTradeData2.index);
     expectedData = testTradeData2
     expectedData.status = "1"
-    expectedData.relayer = accounts[1].address
+    expectedData.relayer = accounts[1]
     tradeAssert(expectedData, trade, false);
 
   });
@@ -247,22 +247,21 @@ describe("PheasantNetworkBridgeChild", function () {
 
   });
 
-
   it("withdraw", async function () {
 
     const testTradeData = testData.getTradeData(2);
     await testData.setUpTrade(testTradeData, 0, true);
     const evidence = testData.getEvidenceData(0);
 
-    const InitialBalance = await testToken.balanceOf(accounts[0].address);
-    await helper.connect(accounts[0]).helperWithdraw(testTradeData.user, testTradeData.index, evidence);
+    const InitialBalance = await testToken.balanceOf(accounts[0]);
+    await helper.helperWithdraw(testTradeData.user, testTradeData.index, evidence,{from:accounts[0]});
     const trade = await helper.getTrade(testTradeData.user, testTradeData.index);
     const expectedData = testTradeData
     expectedData.status = "2"
     tradeAssert(expectedData, trade, false);
 
-    const balance = await testToken.balanceOf(accounts[0].address);
-    assert.equal(balance.toString(), InitialBalance.add(testTradeData.amount).toString())
+    const balance = await testToken.balanceOf(accounts[0]);
+    assert.equal(balance.toString(), InitialBalance.add(new BN(testTradeData.amount)).toString())
 
 
   });
@@ -274,8 +273,8 @@ describe("PheasantNetworkBridgeChild", function () {
     const evidence = testData.getEvidenceData(0);
 
     const InitialBalance = await testToken.balanceOf(testTradeData.relayer);
-    await helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence);
-    const trade = await helper.getTrade(accounts[0].address, 0);
+    await helper.helperWithdraw(accounts[0], 0, evidence,{from:accounts[0]});
+    const trade = await helper.getTrade(accounts[0], 0);
     const expectedData = testTradeData
     expectedData.status = "1"
     tradeAssert(expectedData, trade, false);
@@ -290,11 +289,11 @@ describe("PheasantNetworkBridgeChild", function () {
     await testData.setUpTrade(testTradeData, 0, true);
     //NO BID
     const evidence = testData.getEvidenceData(0);
-    await helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence);
-    const trade = await helper.getTrade(accounts[0].address, 0);
+    await helper.helperWithdraw(accounts[0], 0, evidence,{from:accounts[0]});
+    const trade = await helper.getTrade(accounts[0], 0);
     tradeAssert(testTradeData, trade, false);
 
-    const balance = await testToken.balanceOf(accounts[2].address);
+    const balance = await testToken.balanceOf(accounts[2]);
     assert.equal(balance.toString(), 0)
 
   });
@@ -305,16 +304,15 @@ describe("PheasantNetworkBridgeChild", function () {
     await testData.setUpTrade(testTradeData, 0, true);
     const evidence = testData.getEvidenceData(0);
 
-    const InitialBalance = await testToken.balanceOf(accounts[0].address);
-    await helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence); //invalid Relayer
-    const trade = await helper.getTrade(accounts[0].address, 0);
+    const InitialBalance = await testToken.balanceOf(accounts[0]);
+    await helper.helperWithdraw(accounts[0], 0, evidence,{from:accounts[0]}); //invalid Relayer
+    const trade = await helper.getTrade(accounts[0], 0);
 
     tradeAssert(testTradeData, trade, false);
-    const balance = await testToken.balanceOf(accounts[0].address);
+    const balance = await testToken.balanceOf(accounts[0]);
     assert.equal(balance.toString(), InitialBalance.toString())
 
   });
-
 
   it("bulkWithdraw", async function () {
 
@@ -332,7 +330,7 @@ describe("PheasantNetworkBridgeChild", function () {
       testData.getEvidenceData(0)
     ]
 
-    await helper.connect(accounts[0]).bulkWithdraw(userTrades , evidences);
+    await helper.bulkWithdraw(userTrades , evidences, {from:accounts[0]});
     trade = await helper.getTrade(testTradeData.user, testTradeData.index);
     const expectedData = testTradeData
     expectedData.status = "2"
@@ -362,7 +360,7 @@ describe("PheasantNetworkBridgeChild", function () {
       testData.getEvidenceData(0)
     ]
 
-    await helper.connect(accounts[0]).bulkWithdraw(userTrades , evidences);
+    await helper.bulkWithdraw(userTrades , evidences, {from:accounts[0]});
     trade = await helper.getTrade(testTradeData.user, testTradeData.index);
     const expectedData = testTradeData
     expectedData.status = "2"
@@ -383,8 +381,8 @@ describe("PheasantNetworkBridgeChild", function () {
     let initialBalance = await testToken.balanceOf(testTradeData.user);
     await testData.setUpTrade(testTradeData, 0, true);
 
-    await helper.connect(accounts[0]).cancelTrade(0);
-    let trade = await helper.getTrade(accounts[0].address, 0);
+    await helper.cancelTrade(0, {from:accounts[0]});
+    let trade = await helper.getTrade(accounts[0], 0);
     const expectedData = testTradeData
     expectedData.status = "99"
     tradeAssert(expectedData, trade, false);
@@ -399,7 +397,7 @@ describe("PheasantNetworkBridgeChild", function () {
     const testTradeData = testData.getTradeData(2);
     await testData.setUpTrade(testTradeData, 0, true);
     await expectRevert(
-      helper.connect(accounts[0]).cancelTrade(testTradeData.index),
+      helper.cancelTrade(testTradeData.index, {from:accounts[0]}),
       "Can't cancel after bidding"
     );
 
@@ -429,33 +427,28 @@ describe("PheasantNetworkBridgeChild", function () {
 
   it("dispute", async function () {
 
-    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
-    const testTradeData = testData.getTradeData(13, lastestBlock.timestamp);
-
+    const blockTime = await time.latest();
+    const testTradeData = testData.getTradeData(13, blockTime);
     await testData.setUpTrade(testTradeData, 0, true);
-
-    await testToken.connect(accounts[0]).approve(helper.address, userDepositThreshold);
-    let userBalance = await helper.getUserDepositBalance(accounts[0].address);
+    await testToken.approve(helper.address, userDepositThreshold, {from:accounts[0]});
+    let userBalance = await helper.getUserDepositBalance(accounts[0]);
     assert.equal(userBalance.toString(), 0)
     const initialBalance = await testToken.balanceOf(helper.address);
 
-    await hre.ethers.provider.send("evm_increaseTime", [3580]) //around 1 hour later.
-    await hre.ethers.provider.send("evm_mine")
-
-    await helper.connect(accounts[0]).dispute(0);
-    let trade = await helper.getTrade(accounts[0].address, 0);
+    await helper.dispute(0,{from:accounts[0]});
+    let trade = await helper.getTrade(accounts[0], 0);
     const expectedData = testTradeData
     expectedData.status = "3"
     tradeAssert(expectedData, trade, false);
     assert.notEqual(trade.disputeTimestamp, trade.timestamp)
 
-    const disputeList = await helper.connect(accounts[1]).getDisputeList();
-    assert.equal(disputeList[0].userAddress, accounts[0].address)
+    const disputeList = await helper.getDisputeList({from:accounts[1]});
+    assert.equal(disputeList[0].userAddress, accounts[0])
 
     let balance = await testToken.balanceOf(helper.address);
     assert.equal(balance.toString(), initialBalance.add(userDepositThreshold).toString())
 
-    userBalance = await helper.getUserDepositBalance(accounts[0].address);
+    userBalance = await helper.getUserDepositBalance(accounts[0]);
     assert.equal(userBalance.toString(), userDepositThreshold.toString())
 
 
@@ -466,16 +459,15 @@ describe("PheasantNetworkBridgeChild", function () {
 
   it("dispute invalid timestamp", async function () {
 
-    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
-    const testTradeData = testData.getTradeData(14, lastestBlock.timestamp);
+    const blockTime = await time.latest();
+    const testTradeData = testData.getTradeData(14, blockTime);
     await testData.setUpTrade(testTradeData, 0, true);
-    await hre.ethers.provider.send("evm_increaseTime", [3600])
-    await hre.ethers.provider.send("evm_mine")
 
-    await testToken.connect(accounts[0]).approve(helper.address, userDepositThreshold);
+    await time.increase(time.duration.hours(1));
+    await testToken.approve(helper.address, userDepositThreshold, {from:accounts[0]});
 
     await expectRevert(
-      helper.connect(accounts[0]).dispute(0),
+      helper.dispute(0,{from:accounts[0]}),
       "Disputes must run within one hour of withdrawal"
     );
 
@@ -486,66 +478,64 @@ describe("PheasantNetworkBridgeChild", function () {
 
 
   it("dispute invalid status", async function () {
-    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
-    const testTradeData = testData.getTradeData(15, lastestBlock.timestamp);
+    const blockTime = await time.latest();
+    const testTradeData = testData.getTradeData(15, blockTime);
     await testData.setUpTrade(testTradeData, 0, true);
 
     //NO Withdraw
-    await testToken.connect(accounts[0]).approve(helper.address, userDepositThreshold);
+    await testToken.approve(helper.address, userDepositThreshold, {from:accounts[0]});
     await expectRevert(
-      helper.connect(accounts[0]).dispute(0),
+      helper.dispute(0,{from:accounts[0]}),
       "Can't dispute before withdraw"
     );
 
-  });
 
+
+  });
 
   it("slash", async function () {
 
-    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
-    const testTradeData = testData.getTradeData(16, lastestBlock.timestamp);
+    const blockTime = await time.latest();
+    const testTradeData = testData.getTradeData(16, blockTime);
     await testData.setUpTrade(testTradeData, 0, true);
     const testBondData = testData.getBondData(0);
     await testData.setUpBalance(testBondData.bond, 1)
     await testData.setUpBond(testBondData.bond, 1)
     await testData.setUpUserDeposit(userDepositThreshold, 0)
 
-    await hre.ethers.provider.send("evm_increaseTime", [3660])
-    await hre.ethers.provider.send("evm_mine")
+    await time.increase(time.duration.minutes(61));
 
-
-    const initialUserBalance = await testToken.balanceOf(accounts[0].address);
-    await helper.connect(accounts[0]).slash(0);
-    const trade = await helper.getTrade(accounts[0].address, 0);
+    const initialUserBalance = await testToken.balanceOf(accounts[0]);
+    await helper.slash(0,{from:accounts[0]});
+    const trade = await helper.getTrade(accounts[0], 0);
     const expectedData = testTradeData
     expectedData.status = "4"
     tradeAssert(expectedData, trade, false);
 
-    const userBalance = await helper.getUserDepositBalance(accounts[0].address);
+    const userBalance = await helper.getUserDepositBalance(accounts[0]);
     assert.equal(userBalance.toString(), 0)
-    const relayerBalance = await helper.getRelayerBondBalance(accounts[1].address);
+    const relayerBalance = await helper.getRelayerBondBalance(accounts[1]);
     assert.equal(relayerBalance.toString(), 0)
-    const balance = await testToken.balanceOf(accounts[0].address);
-    assert.equal(balance.toString(), initialUserBalance.add(testBondData.bond).add(userDepositThreshold).toString())
+    const balance = await testToken.balanceOf(accounts[0]);
+    assert.equal(balance.toString(), initialUserBalance.add(new BN(testBondData.bond)).add(new BN(userDepositThreshold)).toString())
 
   });
 
 
   it("slash invalid status", async function () {
 
-    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
-    const testTradeData = testData.getTradeData(17, lastestBlock.timestamp);
+    const blockTime = await time.latest();
+    const testTradeData = testData.getTradeData(17, blockTime);
     await testData.setUpTrade(testTradeData, 0, true);
     const testBondData = testData.getBondData(0);
     await testData.setUpBalance(testBondData.bond, 1)
     await testData.setUpBond(testBondData.bond, 1)
     await testData.setUpUserDeposit(userDepositThreshold, 0)
 
-    await hre.ethers.provider.send("evm_increaseTime", [3660])
-    await hre.ethers.provider.send("evm_mine")
+    await time.increase(time.duration.minutes(61));
 
     await expectRevert(
-      helper.connect(accounts[0]).slash(0),
+      helper.slash(0,{from:accounts[0]}),
       "Slashes must run after dispute"
     );
 
@@ -553,20 +543,17 @@ describe("PheasantNetworkBridgeChild", function () {
 
   it("slash invalid timestamp", async function () {
 
-    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
-    const testTradeData = testData.getTradeData(18, lastestBlock.timestamp);
+    const blockTime = await time.latest();
+    const testTradeData = testData.getTradeData(18, blockTime);
     await testData.setUpTrade(testTradeData, 0, true);
     const testBondData = testData.getBondData(0);
     await testData.setUpBalance(testBondData.bond, 1)
     await testData.setUpBond(testBondData.bond, 1)
     await testData.setUpUserDeposit(userDepositThreshold, 0)
 
-    await hre.ethers.provider.send("evm_increaseTime", [3480])
-    await hre.ethers.provider.send("evm_mine")
-
-
+    await time.increase(time.duration.minutes(58));
     await expectRevert(
-      helper.connect(accounts[0]).slash(0),
+      helper.slash(0,{from:accounts[0]}),
       "A certain time must elapse after dispute"
     );
 
@@ -574,8 +561,8 @@ describe("PheasantNetworkBridgeChild", function () {
 
 
   it("submitEvidence", async function () {
-    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
-    const testTradeData = testData.getTradeData(19, lastestBlock.timestamp);
+    const blockTime = await time.latest();
+    const testTradeData = testData.getTradeData(19, blockTime);
     await testData.setUpTrade(testTradeData, 0, true);
     const testBondData = testData.getBondData(0);
     await testData.setUpBalance(testBondData.bond, 1)
@@ -584,17 +571,17 @@ describe("PheasantNetworkBridgeChild", function () {
     const evidence = testData.getEvidenceData(1);
     await testData.setUpEvidence(testTradeData.user, testTradeData.index, evidence, 0)
 
-    const relayerBalance = await testToken.balanceOf(accounts[1].address);
+    const relayerBalance = await testToken.balanceOf(accounts[1]);
     const submission = testData.getEvidenceData(2);
-    await helper.connect(accounts[1]).submitEvidence(accounts[0].address, 0, submission);
-    trade = await helper.getTrade(accounts[0].address, 0);
+    await helper.submitEvidence(accounts[0], 0, submission, {from:accounts[1] });
+    trade = await helper.getTrade(accounts[0], 0);
     const expectedData = testTradeData
     expectedData.status = "5"
     tradeAssert(expectedData, trade, false);
 
-    balance = await testToken.balanceOf(accounts[1].address);
-    assert.equal(balance.toString(), relayerBalance.add(userDepositThreshold).toString());
-    userBalance = await helper.getUserDepositBalance(accounts[0].address);
+    balance = await testToken.balanceOf(accounts[1]);
+    assert.equal(balance.toString(), relayerBalance.add(new BN(userDepositThreshold)).toString());
+    userBalance = await helper.getUserDepositBalance(accounts[0]);
     assert.equal(userBalance.toString(), 0)
 
 
@@ -604,19 +591,19 @@ describe("PheasantNetworkBridgeChild", function () {
   it("depositBond", async function () {
 
     const testBondData = testData.getBondData(1);
-    await testToken.connect(accounts[0]).approve(helper.address, testBondData.bond);
+    await testToken.approve(helper.address, testBondData.bond, {from:accounts[0]});
     let initialBalance = await testToken.balanceOf(helper.address);
-    let userBalance = await testToken.balanceOf(accounts[0].address);
-    let initialRelayerBalance = await helper.getRelayerBondBalance(accounts[0].address);
+    let userBalance = await testToken.balanceOf(accounts[0]);
+    let initialRelayerBalance = await helper.getRelayerBondBalance(accounts[0]);
 
-    await helper.connect(accounts[0]).depositBond(testBondData.bond);
+    await helper.depositBond(testBondData.bond,{from:accounts[0]});
     let balance = await testToken.balanceOf(helper.address);
-    assert.equal(balance.toString(), initialBalance.add(testBondData.bond).toString())
-    balance = await testToken.balanceOf(accounts[0].address);
-    assert.equal(balance.toString(), userBalance.sub(testBondData.bond).toString())
+    assert.equal(balance.toString(), initialBalance.add(new BN(testBondData.bond)).toString())
+    balance = await testToken.balanceOf(accounts[0]);
+    assert.equal(balance.toString(), userBalance.sub(new BN(testBondData.bond)).toString())
 
-    relayerBalance = await helper.getRelayerBondBalance(accounts[0].address);
-    assert.equal(relayerBalance.toString(), initialRelayerBalance.add(testBondData.bond).toString())
+    relayerBalance = await helper.getRelayerBondBalance(accounts[0]);
+    assert.equal(relayerBalance.toString(), initialRelayerBalance.add(new BN(testBondData.bond)).toString())
 
 
 
@@ -625,17 +612,15 @@ describe("PheasantNetworkBridgeChild", function () {
   it("withdrawBond", async function () {
     const testBondData = testData.getBondData(1);
     await testData.setUpBond(testBondData.bond, 0)
-    await helper.connect(accounts[0]).withdrawBond();
+    await helper.withdrawBond({from:accounts[0]});
     let balance = await testToken.balanceOf(helper.address);
     assert.equal(balance.toString(), 0)
-    let relayerBalance = await helper.getRelayerBondBalance(accounts[0].address);
+    let relayerBalance = await helper.getRelayerBondBalance(accounts[0]);
     assert.equal(relayerBalance.toString(), 0)
   });
 
-
-
   it("getTokenAddress", async function () {
-    const l2Address =  await pheasantNetworkBridgeChild.connect(accounts[0]).getTokenAddress(0, true);
+    const l2Address =  await pheasantNetworkBridgeChild.getTokenAddress(0, true, {from:accounts[0]});
     assert.equal(l2Address, testToken.address)
   });
 

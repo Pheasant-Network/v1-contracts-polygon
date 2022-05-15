@@ -13,19 +13,19 @@ class TestData {
   getTradeData(index, time = null) {
     let data = testTrade[index];
     if(Number.isInteger(data.to)) {
-      data.to = this.accounts[data.to].address
+      data.to = this.accounts[data.to]
     }
 
     if(Number.isInteger(data.sender)) {
-      data.sender = this.accounts[data.sender].address
+      data.sender = this.accounts[data.sender]
     }
 
     if(Number.isInteger(data.user)) {
-      data.user = this.accounts[data.user].address
+      data.user = this.accounts[data.user]
     }
 
     if(Number.isInteger(data.relayer)) {
-      data.relayer = this.accounts[data.relayer].address
+      data.relayer = this.accounts[data.relayer]
     }
 
     if(time == null) {
@@ -52,10 +52,10 @@ class TestData {
 
   async setUpTrade(testData, accountIndex, isDeposit = false){
     if(isDeposit) {
-      await this.token.connect(this.accounts[accountIndex]).approve(this.helper.address, testData.amount);
+      await this.token.approve(this.helper.address, testData.amount, {from: this.accounts[accountIndex]});
     }
 
-    await this.helper.connect(this.accounts[accountIndex]).setUpTrade(
+    await this.helper.setUpTrade(
       testData.sender,
       testData.index,
       testData.user,
@@ -67,36 +67,40 @@ class TestData {
       testData.status,
       testData.fee,
       testData.disputeTimestamp,
-      isDeposit
+      isDeposit,
+      {from: this.accounts[accountIndex]}
     );
   }
 
 
   async setUpEvidence(user, index, evidence, accountIndex){
-    await this.helper.connect(this.accounts[accountIndex]).setUpEvidence(
+    await this.helper.setUpEvidence(
       user,
       index,
-      evidence
+      evidence,
+      {from: this.accounts[accountIndex]}
     );
   }
 
   async setUpBalance(amount, accountIndex){
-    await this.token.connect(this.accounts[0]).transfer(this.accounts[accountIndex].address, amount);
+    await this.token.transfer(this.accounts[accountIndex], amount, {from:this.accounts[0]});
   }
 
 
 
   async setUpBond(amount, accountIndex){
-    await this.token.connect(this.accounts[accountIndex]).approve(this.helper.address, amount);
-    await this.helper.connect(this.accounts[accountIndex]).depositBond(
-      amount
+    await this.token.approve(this.helper.address, amount, {from: this.accounts[accountIndex]});
+    await this.helper.depositBond(
+      amount,
+      {from: this.accounts[accountIndex]}
     );
   }
 
   async setUpUserDeposit(amount, accountIndex){
-    await this.token.connect(this.accounts[accountIndex]).approve(this.helper.address, amount);
-    await this.helper.connect(this.accounts[accountIndex]).setUpUserDeposit(
-      amount
+    await this.token.approve(this.helper.address, amount, {from: this.accounts[accountIndex]});
+    await this.helper.setUpUserDeposit(
+      amount,
+      {from: this.accounts[accountIndex]}
     );
   }
 
