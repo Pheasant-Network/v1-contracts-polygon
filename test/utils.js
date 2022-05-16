@@ -107,6 +107,7 @@ const setUpMockDisputeManager = async function(mockDisputeManager, results) {
   await mockDisputeManager.mock.verifyRawTx.returns(results[2]);
   await mockDisputeManager.mock.verifyTxSignature.returns(results[3]);
   await mockDisputeManager.mock.verifyBlockHash.returns(results[4]);
+  await mockDisputeManager.mock.checkTransferTx.returns(results[5]);
   return mockDisputeManager;
 }
 

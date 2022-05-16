@@ -66,14 +66,6 @@ contract Helper is PheasantNetworkBridgeChild {
         require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
     }
 
-    function helperCheckTransferTx(
-        bytes calldata transaction,
-        address recipient,
-        uint256 amount
-    ) public pure returns (bool) {
-        return super.checkTransferTx(transaction, recipient, amount);
-    }
-
     function helperWithdraw(
         address user,
         uint256 index,

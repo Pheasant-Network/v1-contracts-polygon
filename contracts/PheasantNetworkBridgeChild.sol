@@ -20,6 +20,8 @@ interface PheasantNetworkDisputeManagerInterface {
     function verifyTxSignature(address from, bytes[] calldata txRaw) external pure returns (bool);
 
     function verifyBlockHash(bytes32 _blockHash, uint256 _blockNumber) external view returns (bool);
+
+    function checkTransferTx(bytes calldata transaction, address recipient, uint256 amount) external pure returns (bool);
 }
 
 contract PheasantNetworkBridgeChild is Ownable {
@@ -197,7 +199,7 @@ contract PheasantNetworkBridgeChild is Ownable {
         require(trade.status == STATUS_DISPUTE, "Invalid Status");
         require(trade.relayer == msg.sender, "Only Relayer can submit Evidences");
 
-        require(checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee), "Invalid Tx Data");
+        require(disputeManager.checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee), "Invalid Tx Data");
         require(disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader), "Invalid BlockHeader");
         require(disputeManager.verifyProof(keccak256(evidence.transaction), evidence.txProof, evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX], evidence.path), "Invalid Tx Proof");
         require(disputeManager.verifyRawTx(evidence.transaction, evidence.rawTx), "Invalid Tx elements");
@@ -322,7 +324,7 @@ contract PheasantNetworkBridgeChild is Ownable {
         Trade memory trade = getTrade(user, index);
         if (trade.status != STATUS_BID) return;
         if (trade.relayer != msg.sender) return;
-        if (!checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee)) return;
+        if (!disputeManager.checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee)) return;
 
         trade.status = STATUS_PAID;
         evidences[user][index] = evidence;
@@ -333,18 +335,6 @@ contract PheasantNetworkBridgeChild is Ownable {
         IERC20 token = IERC20(tokenAddressL2[trade.tokenTypeIndex]);
         if (!token.transfer(msg.sender, trade.amount)) return;
 
-    }
-
-    function checkTransferTx(
-        bytes calldata transaction,
-        address recipient,
-        uint256 amount
-    ) internal pure returns (bool) {
-        bytes[] memory decodedTx = decodeNode(transaction[1:]);
-        bytes memory value = decodedTx[TRANSACTION_VALUE_INDEX];
-        bytes memory to = decodedTx[TRANSACTION_TO_INDEX];
-        bytes memory prefix = new bytes(32 - value.length);
-        return toAddress(to, 0) == recipient && toUint256(bytes.concat(prefix, value), 0) >= amount;
     }
 
     function decodeNode(bytes memory item) public pure returns (bytes[] memory) {
@@ -367,14 +357,4 @@ contract PheasantNetworkBridgeChild is Ownable {
         return tempUint;
     }
 
-    function toAddress(bytes memory _bytes, uint256 _start) internal pure returns (address) {
-        require(_bytes.length >= _start + 20, "toAddress_outOfBounds");
-        address tempAddress;
-
-        assembly {
-            tempAddress := div(mload(add(add(_bytes, 0x20), _start)), 0x1000000000000000000000000)
-        }
-
-        return tempAddress;
-    }
 }
