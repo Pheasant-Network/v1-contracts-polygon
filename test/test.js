@@ -114,19 +114,17 @@ describe("PheasantNetworkBridgeChild", function () {
 
     const testTradeData = testData.getTradeData(4);
     await testToken.connect(accounts[0]).approve(pheasantNetworkBridgeChild.address, testTradeData.amount);
-    await expectRevert(
-      pheasantNetworkBridgeChild.connect(accounts[0]).newTrade(testTradeData.amount, testTradeData.to, testTradeData.fee, testTradeData.tokenTypeIndex),
-      "Only ETH Support for now"
-    );
+    await expect(
+      pheasantNetworkBridgeChild.connect(accounts[0]).newTrade(testTradeData.amount, testTradeData.to, testTradeData.fee, testTradeData.tokenTypeIndex)
+    ).to.be.revertedWith("Only ETH Support for now");
 
 
   });
 
   it("getTrade No Trade Error", async function () {
-    await expectRevert(
-      pheasantNetworkBridgeChild.getTrade(accounts[0].address, 0),
-      "No Trade Exists"
-    );
+    await expect(
+      pheasantNetworkBridgeChild.getTrade(accounts[0].address, 0)
+    ).to.be.revertedWith("No Trade Exists");
   });
 
 
@@ -398,11 +396,9 @@ describe("PheasantNetworkBridgeChild", function () {
 
     const testTradeData = testData.getTradeData(2);
     await testData.setUpTrade(testTradeData, 0, true);
-    await expectRevert(
+    await expect(
       helper.connect(accounts[0]).cancelTrade(testTradeData.index),
-      "Can't cancel after bidding"
-    );
-
+    ).to.be.revertedWith("Can't cancel after bidding");
 
   });
 
@@ -474,10 +470,10 @@ describe("PheasantNetworkBridgeChild", function () {
 
     await testToken.connect(accounts[0]).approve(helper.address, userDepositThreshold);
 
-    await expectRevert(
+    await expect(
       helper.connect(accounts[0]).dispute(0),
-      "Disputes must run within one hour of withdrawal"
-    );
+    ).to.be.revertedWith("Disputes must run within one hour of withdrawal");
+
 
 
 
@@ -492,10 +488,10 @@ describe("PheasantNetworkBridgeChild", function () {
 
     //NO Withdraw
     await testToken.connect(accounts[0]).approve(helper.address, userDepositThreshold);
-    await expectRevert(
+    await expect(
       helper.connect(accounts[0]).dispute(0),
-      "Can't dispute before withdraw"
-    );
+    ).to.be.revertedWith("Can't dispute before withdraw");
+
 
   });
 
@@ -544,10 +540,10 @@ describe("PheasantNetworkBridgeChild", function () {
     await hre.ethers.provider.send("evm_increaseTime", [3660])
     await hre.ethers.provider.send("evm_mine")
 
-    await expectRevert(
+    await expect(
       helper.connect(accounts[0]).slash(0),
-      "Slashes must run after dispute"
-    );
+    ).to.be.revertedWith("Slashes must run after dispute");
+
 
   });
 
@@ -564,11 +560,10 @@ describe("PheasantNetworkBridgeChild", function () {
     await hre.ethers.provider.send("evm_increaseTime", [3480])
     await hre.ethers.provider.send("evm_mine")
 
-
-    await expectRevert(
+    await expect(
       helper.connect(accounts[0]).slash(0),
-      "A certain time must elapse after dispute"
-    );
+    ).to.be.revertedWith("A certain time must elapse after dispute");
+
 
   });
 
