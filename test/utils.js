@@ -99,8 +99,16 @@ class TestData {
       amount
     );
   }
-
-
 }
 
-module.exports = TestData;
+const setUpMockDisputeManager = async function(mockDisputeManager, results) { 
+  await mockDisputeManager.mock.verifyBlockHeader.returns(results[0]);
+  await mockDisputeManager.mock.verifyProof.returns(results[1]);
+  await mockDisputeManager.mock.verifyRawTx.returns(results[2]);
+  await mockDisputeManager.mock.verifyTxSignature.returns(results[3]);
+  await mockDisputeManager.mock.verifyBlockHash.returns(results[4]);
+  return mockDisputeManager;
+}
+
+exports.setUpMockDisputeManager = setUpMockDisputeManager;
+exports.TestData = TestData;

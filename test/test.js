@@ -3,13 +3,18 @@ const { ethers } = require("hardhat");
 const BN = require('bn.js');
 const userDepositThreshold = "30000000000000000000";
 const { time, expectRevert } = require('@openzeppelin/test-helpers');
-const TestData = require('./utils.js');
+const utils = require('./utils.js');
+const TestData = utils.TestData;
+const setUpMockDisputeManager = utils.setUpMockDisputeManager;
+const {deployMockContract} = require('@ethereum-waffle/mock-contract');
+const TestDisputeManagerJSON = require('../artifacts/contracts/TestDisputeManager.sol/TestDisputeManager');
 
 describe("PheasantNetworkBridgeChild", function () {
 
   let pheasantNetworkBridgeChild;
   let TestDisputeManager;
   let testDisputeManager;
+  let mockDisputeManager;
   let TestToken;
   let testToken;
   let RLPDecoder;
@@ -25,6 +30,7 @@ describe("PheasantNetworkBridgeChild", function () {
     TestDisputeManager = await hre.ethers.getContractFactory("TestDisputeManager");
     rlpDecoder = await RLPDecoder.deploy();
     accounts =  await ethers.getSigners();
+    mockDisputeManager = await deployMockContract(accounts[0], TestDisputeManagerJSON.abi);
     testDisputeManager = await TestDisputeManager.connect(accounts[0]).deploy();
   });
 
@@ -40,14 +46,14 @@ describe("PheasantNetworkBridgeChild", function () {
       },
     });
 
-    pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.connect(accounts[0]).deploy(tokenAddressList, userDepositThreshold.toString(), testDisputeManager.address);
+    pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.connect(accounts[0]).deploy(tokenAddressList, userDepositThreshold.toString(), mockDisputeManager.address);
 
     const Helper = await hre.ethers.getContractFactory("Helper", {
       libraries: {
         RLPDecoder: rlpDecoder.address,
       },
     });
-    helper = await Helper.deploy(tokenAddressList, userDepositThreshold.toString(), testDisputeManager.address);
+    helper = await Helper.deploy(tokenAddressList, userDepositThreshold.toString(), mockDisputeManager.address);
 
     testData = new TestData(accounts, helper, testToken);
   });
@@ -571,6 +577,7 @@ describe("PheasantNetworkBridgeChild", function () {
   it("submitEvidence", async function () {
     const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
     const testTradeData = testData.getTradeData(19, lastestBlock.timestamp);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true]);
     await testData.setUpTrade(testTradeData, 0, true);
     const testBondData = testData.getBondData(0);
     await testData.setUpBalance(testBondData.bond, 1)
@@ -591,10 +598,20 @@ describe("PheasantNetworkBridgeChild", function () {
     assert.equal(balance.toString(), relayerBalance.add(userDepositThreshold).toString());
     userBalance = await helper.getUserDepositBalance(accounts[0].address);
     assert.equal(userBalance.toString(), 0)
-
-
   });
 
+  it("submitEvidence Invalid status", async function () {
+    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
+    const testTradeData = testData.getTradeData(23, lastestBlock.timestamp);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true]);
+    await testData.setUpTrade(testTradeData, 0, true);
+    const relayerBalance = await testToken.balanceOf(accounts[1].address);
+    const submission = testData.getEvidenceData(2);
+    await expect(
+      helper.connect(accounts[1]).submitEvidence(accounts[0].address, 0, submission),
+    ).to.be.revertedWith("Invalid Status");
+
+  });
 
   it("depositBond", async function () {
 
