@@ -26,4 +26,12 @@ contract TestDisputeManager {
     function verifyBlockHash(bytes32 _blockHash, uint256 _blockNumber) external view returns (bool) {
         return true;
     }
+
+    function checkTransferTx(
+        bytes calldata transaction,
+        address recipient,
+        uint256 amount
+    ) external pure returns (bool) {
+        return true;
+    }
 }

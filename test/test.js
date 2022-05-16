@@ -226,37 +226,12 @@ describe("PheasantNetworkBridgeChild", function () {
 
   });
 
-
-  it("checkTransferTx", async function () {
-
-    const testTx = testData.getTransferTxData(0);
-    let result = await helper.helperCheckTransferTx(testTx.transaction, testTx.to, testTx.amount);
-    assert.equal(result, true)
-
-  });
-
-  it("checkTransferTx, invalid to", async function () {
-
-    const testTx = testData.getTransferTxData(1);
-    let result = await helper.helperCheckTransferTx(testTx.transaction, testTx.to, testTx.amount);
-    assert.equal(result, false)
-
-  });
-
-  it("checkTransferTx, invalid amount", async function () {
-
-    const testTx = testData.getTransferTxData(2);
-    let result = await helper.helperCheckTransferTx(testTx.transaction, testTx.to, testTx.amount);
-    assert.equal(result, false)
-
-  });
-
-
   it("withdraw", async function () {
 
     const testTradeData = testData.getTradeData(2);
     await testData.setUpTrade(testTradeData, 0, true);
     const evidence = testData.getEvidenceData(0);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
 
     const InitialBalance = await testToken.balanceOf(accounts[0].address);
     await helper.connect(accounts[0]).helperWithdraw(testTradeData.user, testTradeData.index, evidence);
@@ -273,9 +248,10 @@ describe("PheasantNetworkBridgeChild", function () {
 
   it("withdraw invalid transaction", async function () {
 
-    const testTradeData = testData.getTradeData(3); //not enough amount transaction
+    const testTradeData = testData.getTradeData(3); 
     await testData.setUpTrade(testTradeData, 0, true);
     const evidence = testData.getEvidenceData(0);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, false]);
 
     const InitialBalance = await testToken.balanceOf(testTradeData.relayer);
     await helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence);
@@ -292,6 +268,7 @@ describe("PheasantNetworkBridgeChild", function () {
 
     const testTradeData = testData.getTradeData(7);
     await testData.setUpTrade(testTradeData, 0, true);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
     //NO BID
     const evidence = testData.getEvidenceData(0);
     await helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence);
@@ -308,6 +285,7 @@ describe("PheasantNetworkBridgeChild", function () {
     const testTradeData = testData.getTradeData(21);
     await testData.setUpTrade(testTradeData, 0, true);
     const evidence = testData.getEvidenceData(0);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
 
     const InitialBalance = await testToken.balanceOf(accounts[0].address);
     await helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence); //invalid Relayer
@@ -326,6 +304,7 @@ describe("PheasantNetworkBridgeChild", function () {
     const testTradeData2 = testData.getTradeData(9);
     await testData.setUpTrade(testTradeData, 0, true);
     await testData.setUpTrade(testTradeData2, 0, true);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
     const userTrades = [
       {userAddress: testTradeData.user, index: testTradeData.index},
       {userAddress: testTradeData2.user, index: testTradeData2.index}
@@ -356,6 +335,7 @@ describe("PheasantNetworkBridgeChild", function () {
     const testTradeData2 = testData.getTradeData(22);
     await testData.setUpTrade(testTradeData, 0, true);
     await testData.setUpTrade(testTradeData2, 0, true);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
     const userTrades = [
       {userAddress: testTradeData.user, index: testTradeData.index},
       {userAddress: testTradeData2.user, index: testTradeData2.index}
@@ -577,7 +557,7 @@ describe("PheasantNetworkBridgeChild", function () {
   it("submitEvidence", async function () {
     const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
     const testTradeData = testData.getTradeData(19, lastestBlock.timestamp);
-    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true]);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
     await testData.setUpTrade(testTradeData, 0, true);
     const testBondData = testData.getBondData(0);
     await testData.setUpBalance(testBondData.bond, 1)
@@ -603,7 +583,7 @@ describe("PheasantNetworkBridgeChild", function () {
   it("submitEvidence Invalid status", async function () {
     const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
     const testTradeData = testData.getTradeData(23, lastestBlock.timestamp);
-    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true]);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
     await testData.setUpTrade(testTradeData, 0, true);
     const relayerBalance = await testToken.balanceOf(accounts[1].address);
     const submission = testData.getEvidenceData(2);
