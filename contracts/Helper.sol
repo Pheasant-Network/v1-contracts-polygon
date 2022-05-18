@@ -8,8 +8,9 @@ contract Helper is PheasantNetworkBridgeChild {
     constructor(
         address[] memory _tokenAddressList,
         uint256 _userDepositThreshold,
-        address _disputeManager
-    ) PheasantNetworkBridgeChild(_tokenAddressList, _userDepositThreshold, _disputeManager) {}
+        address _disputeManager,
+        address _newOwner
+    ) PheasantNetworkBridgeChild(_tokenAddressList, _userDepositThreshold, _disputeManager, _newOwner) {}
 
     function helperBid(address user, uint256 index) public {
         super.bid(user, index);

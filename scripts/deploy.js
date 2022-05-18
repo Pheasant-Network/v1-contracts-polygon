@@ -8,7 +8,7 @@ const BN = require('bn.js');
 const userDepositThreshold = "100000000000000000";
 const utils = require('./utils')
 const disputeManagerContractPath = "../bridge-dispute-manager/";
-
+require('dotenv').config({ path: '../.env' });
 
 async function main() {
   let contractAddressObj = utils.getContractAddresses()
@@ -17,6 +17,7 @@ async function main() {
   console.log("Network name =", hre.network.name);
   const tokenAddressList = [];
   let disputeManagerAddress = "";
+  let newOwner = "";
 
   if(hre.network.name == "localhost") {
     const TestToken = await hre.ethers.getContractFactory("TestToken");
@@ -27,8 +28,10 @@ async function main() {
     const TestDisputeManager = await hre.ethers.getContractFactory("TestDisputeManager");
     const testDisputeManager = await TestDisputeManager.deploy();
     disputeManagerAddress = testDisputeManager.address;
+    newOwner = accounts[0].address;
 
   } else if(hre.network.name == "mumbai" || hre.network.name == "polygon") {
+    newOwner = process.env.NEW_OWNER;
     tokenAddressList.push(contractAddressObj[hre.network.name].WETH);
     disputeManagerAddress = disputeManagerContractAddressObj[hre.network.name].BridgeDisputeManager
   }
@@ -41,7 +44,7 @@ async function main() {
     },
   });
 
-  const pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.connect(accounts[0]).deploy(tokenAddressList, userDepositThreshold, disputeManagerAddress);
+  const pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.connect(accounts[0]).deploy(tokenAddressList, userDepositThreshold, disputeManagerAddress, newOwner);
 
   console.log("PheasantNetworkBridgeChild address:", pheasantNetworkBridgeChild.address);
   const Helper = await hre.ethers.getContractFactory("Helper", {
@@ -49,7 +52,7 @@ async function main() {
       RLPDecoder: rlpDecoder.address,
     },
   });
-  const helper = await Helper.deploy(tokenAddressList, userDepositThreshold, disputeManagerAddress);
+  const helper = await Helper.deploy(tokenAddressList, userDepositThreshold, disputeManagerAddress, newOwner);
   console.log("Helper address:", helper.address);
 
   contractAddressObj[hre.network.name].PheasantNetworkBridgeChild = pheasantNetworkBridgeChild.address;
