@@ -46,14 +46,14 @@ describe("PheasantNetworkBridgeChild", function () {
       },
     });
 
-    pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.connect(accounts[0]).deploy(tokenAddressList, userDepositThreshold.toString(), mockDisputeManager.address);
+    pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.connect(accounts[0]).deploy(tokenAddressList, userDepositThreshold.toString(), mockDisputeManager.address, accounts[0].address);
 
     const Helper = await hre.ethers.getContractFactory("Helper", {
       libraries: {
         RLPDecoder: rlpDecoder.address,
       },
     });
-    helper = await Helper.deploy(tokenAddressList, userDepositThreshold.toString(), mockDisputeManager.address);
+    helper = await Helper.deploy(tokenAddressList, userDepositThreshold.toString(), mockDisputeManager.address, accounts[0].address);
 
     testData = new TestData(accounts, helper, testToken);
   });

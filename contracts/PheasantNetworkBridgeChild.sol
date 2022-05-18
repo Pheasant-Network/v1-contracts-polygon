@@ -30,11 +30,13 @@ contract PheasantNetworkBridgeChild is Ownable {
     constructor(
         address[] memory _tokenAddressList,
         uint256 _userDepositThreshold,
-        address _disputeManager
+        address _disputeManager,
+        address _newOwner
     ) {
         tokenAddressL2[ETH_TOKEN_INDEX] = _tokenAddressList[ETH_TOKEN_INDEX];
         userDepositThreshold = _userDepositThreshold;
         disputeManager = PheasantNetworkDisputeManagerInterface(_disputeManager);
+        transferOwnership(_newOwner);
     }
 
     PheasantNetworkDisputeManagerInterface internal disputeManager;
