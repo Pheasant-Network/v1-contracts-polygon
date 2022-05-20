@@ -24,6 +24,8 @@ async function main() {
     const testToken = await TestToken.deploy(accounts[0].address);
     console.log("TestToken address:", testToken.address);
     tokenAddressList.push(testToken.address);
+    contractAddressObj[hre.network.name].TestToken = testToken.address;
+    utils.writeContractAddresses(contractAddressObj)
 
     const TestDisputeManager = await hre.ethers.getContractFactory("TestDisputeManager");
     const testDisputeManager = await TestDisputeManager.deploy();
