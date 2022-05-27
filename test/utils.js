@@ -1,5 +1,6 @@
 const testTrade = require('./data/trade.json');
 const testBond = require('./data/bond.json');
+const testAsset = require('./data/asset.json');
 const testEvidence = require('./data/evidence.json');
 const testTransferTx = require('./data/checkTransferTx.json');
 
@@ -50,6 +51,10 @@ class TestData {
     return testBond[index];
   }
 
+  getAssetData(index) {
+    return testAsset[index];
+  }
+
   async setUpTrade(testData, accountIndex, isDeposit = false){
     if(isDeposit) {
       await this.token.connect(this.accounts[accountIndex]).approve(this.helper.address, testData.amount);
@@ -89,6 +94,13 @@ class TestData {
   async setUpBond(amount, accountIndex){
     await this.token.connect(this.accounts[accountIndex]).approve(this.helper.address, amount);
     await this.helper.connect(this.accounts[accountIndex]).depositBond(
+      amount
+    );
+  }
+
+  async setUpAsset(amount, accountIndex){
+    await this.token.connect(this.accounts[accountIndex]).approve(this.helper.address, amount);
+    await this.helper.connect(this.accounts[accountIndex]).depositAsset(
       amount
     );
   }

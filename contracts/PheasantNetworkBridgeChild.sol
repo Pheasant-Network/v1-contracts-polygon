@@ -61,12 +61,14 @@ contract PheasantNetworkBridgeChild is Ownable {
     mapping(address => Trade[]) internal trades;
     mapping(address => mapping(uint256 => Evidence)) internal evidences;
     mapping(address => uint256) internal relayerBond;
+    mapping(address => uint256) internal relayerAsset;
     mapping(address => uint256) internal userDeposit;
     //uint constant SUBMIT_LIMIT_BLOCK_INTERVAL = 150; //approximately 30 min.
 
     event NewTrade(address indexed userAddress, uint8 tokenTypeIndex, uint256 amount);
     event Bid(address indexed relayer, address indexed userAddress, uint256 index);
     event Withdraw(address indexed relayer, address indexed userAddress, uint256 index);
+    event Accept(address indexed relayer, address indexed userAddress, uint256 index);
     event Dispute(address indexed userAddress, uint256 index);
     event Slash(address indexed userAddress, uint256 index, address indexed relayer);
     event Submit(address indexed relayer, address indexed userAddress, uint256 index);
@@ -90,6 +92,7 @@ contract PheasantNetworkBridgeChild is Ownable {
         uint8 status;
         uint256 fee;
         uint256 disputeTimestamp;
+        bool isGoingUp;
     }
 
     struct Evidence {
@@ -103,6 +106,58 @@ contract PheasantNetworkBridgeChild is Ownable {
         bytes txReceipt;
         bytes[] rawTx;
         bytes[] rawBlockHeader;
+    }
+
+    function getRelayer() public returns (address){
+        return owner();
+    }
+
+    function createTradeTo2ndLayer(
+        uint256 amount,
+        address to,
+        uint256 fee,
+        uint8 tokenTypeIndex,
+        Evidence calldata evidence
+    ) public payable {
+        require(tokenTypeIndex == ETH_TOKEN_INDEX, "Only ETH Support for now");
+        //TODO can't send eth over the threshold
+        require(disputeManager.checkTransferTx(evidence.transaction, to, amount - fee), "Invalid Evidence");
+        address relayer = getRelayer();
+
+        trades[msg.sender].push(
+            Trade(
+                trades[msg.sender].length,
+                msg.sender,
+                tokenTypeIndex,
+                amount,
+                block.timestamp,
+                to,
+                relayer,
+                STATUS_START,
+                fee,
+                block.timestamp,
+                true
+            )
+        );
+
+        userTradeList.push(UserTrade(msg.sender, trades[msg.sender].length - 1));
+        evidences[msg.sender][trades[msg.sender].length - 1] = evidence;
+
+        emit NewTrade(msg.sender, tokenTypeIndex, amount);
+    }
+
+    function accept(address user, uint256 index) external {
+        Trade memory trade = getTrade(user, index);
+        require(trade.status == STATUS_START, "Acceptance can be granted only once");
+
+        trade.status = STATUS_PAID;
+        trades[user][index] = trade;
+        relayerAsset[msg.sender] = relayerAsset[msg.sender].sub(trade.amount.add(trade.fee));
+
+        emit Accept(msg.sender, user, index);
+
+        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+        require(token.transfer(trade.user, trade.amount - trade.fee), "Transfer Fail");
     }
 
     function newTrade(
@@ -123,7 +178,8 @@ contract PheasantNetworkBridgeChild is Ownable {
                 address(0x0),
                 STATUS_START,
                 fee,
-                block.timestamp
+                block.timestamp,
+                false
             )
         );
 
@@ -267,6 +323,23 @@ contract PheasantNetworkBridgeChild is Ownable {
 
     function getUserDepositBalance(address account) external view returns (uint256) {
         return userDeposit[account];
+    }
+
+    function getRelayerAssetBalance(address account) external view returns (uint256) {
+        return relayerAsset[account];
+    }
+
+    function depositAsset(uint256 amount) external {
+        relayerAsset[msg.sender] = relayerAsset[msg.sender].add(amount);
+        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+        require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
+    }
+
+    function withdrawAsset() external {
+        uint256 amount = relayerAsset[msg.sender];
+        relayerAsset[msg.sender] = 0;
+        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+        require(token.transfer(msg.sender, amount), "Transfer Fail");
     }
 
     function depositBond(uint256 amount) external {

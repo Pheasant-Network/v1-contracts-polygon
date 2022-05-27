@@ -41,7 +41,8 @@ contract Helper is PheasantNetworkBridgeChild {
                 relayer,
                 status,
                 fee,
-                disputeTimestamp
+                disputeTimestamp,
+                true
             )
         );
         

@@ -631,6 +631,51 @@ describe("PheasantNetworkBridgeChild", function () {
     assert.equal(l2Address, testToken.address)
   });
 
+
+  it("depositAsset", async function () {
+
+    const testAssetData = testData.getAssetData(1);
+    await testToken.connect(accounts[0]).approve(helper.address, testAssetData.asset);
+    let initialBalance = await testToken.balanceOf(helper.address);
+    let userBalance = await testToken.balanceOf(accounts[0].address);
+    let initialRelayerBalance = await helper.getRelayerAssetBalance(accounts[0].address);
+
+    await helper.connect(accounts[0]).depositAsset(testAssetData.asset);
+    let balance = await testToken.balanceOf(helper.address);
+    assert.equal(balance.toString(), initialBalance.add(testAssetData.asset).toString())
+    balance = await testToken.balanceOf(accounts[0].address);
+    assert.equal(balance.toString(), userBalance.sub(testAssetData.asset).toString())
+
+    relayerBalance = await helper.getRelayerAssetBalance(accounts[0].address);
+    assert.equal(relayerBalance.toString(), initialRelayerBalance.add(testAssetData.asset).toString())
+
+  });
+
+  it("withdrawAsset", async function () {
+    const testAssetData = testData.getAssetData(1);
+    await testData.setUpAsset(testAssetData.asset, 0)
+    await helper.connect(accounts[0]).withdrawAsset();
+    let balance = await testToken.balanceOf(helper.address);
+    assert.equal(balance.toString(), 0)
+    let relayerBalance = await helper.getRelayerAssetBalance(accounts[0].address);
+    assert.equal(relayerBalance.toString(), 0)
+  });
+
+
+  /*it("createTradeTo2ndLayer", async function () {
+    const testTradeData = testData.getTradeData(2);
+    await testData.setUpTrade(testTradeData, 0, true);
+    const evidence = testData.getEvidenceData(0);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
+
+    const InitialBalance = await testToken.balanceOf(accounts[0].address);
+    await helper.connect(accounts[0]).helperWithdraw(testTradeData.user, testTradeData.index, evidence);
+    const trade = await pheasantNetworkBridgeChild.getTrade(accounts[0].address, 0);
+    tradeAssert(testTradeData, trade, false);
+  });*/
+
+
+
 });
 
 const tradeAssert = function(rawExpectedData, rawAcutualData, isTimeStampCheck) { 
