@@ -28,7 +28,8 @@ contract Helper is PheasantNetworkBridgeChild {
         uint8 status,
         uint256 fee,
         uint256 disputeTimestamp,
-        bool isDeposit
+        bool isGoingUp
+
     ) public {
         trades[sender].push(
             Trade(
@@ -42,16 +43,18 @@ contract Helper is PheasantNetworkBridgeChild {
                 status,
                 fee,
                 disputeTimestamp,
-                true
+                isGoingUp
             )
         );
         
         userTradeList.push(UserTrade(msg.sender, trades[msg.sender].length - 1));
 
-        if(isDeposit) {
-            IERC20 token = IERC20(tokenAddressL2[tokenTypeIndex]);
-            require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
-        }
+    }
+
+
+    function setUpDeposit(uint8 tokenTypeIndex, uint256 amount) public {
+        IERC20 token = IERC20(tokenAddressL2[tokenTypeIndex]);
+        require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
     }
 
     function setUpEvidence(
@@ -62,10 +65,23 @@ contract Helper is PheasantNetworkBridgeChild {
         evidences[user][index] = evidence;
     }
 
+
+    function setUpHashedEvidence(
+        address user,
+        uint256 index,
+        Evidence calldata evidence
+    ) public {
+        hashedEvidences[user][index] = super.hashEvidence(evidence);
+    }
+
     function setUpUserDeposit(uint256 amount) external {
         userDeposit[msg.sender] = userDeposit[msg.sender].add(amount);
         IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
         require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
+    }
+
+    function helperHashEvidence(Evidence calldata evidence) public pure returns (bytes32){
+        return super.hashEvidence(evidence);
     }
 
     function helperWithdraw(
@@ -75,4 +91,5 @@ contract Helper is PheasantNetworkBridgeChild {
     ) public {
         super.withdraw(user, index, evidence);
     }
+
 }

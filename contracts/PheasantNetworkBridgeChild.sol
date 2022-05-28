@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {RLPDecoder} from "./RLPDecoder.sol";
+import "hardhat/console.sol";
 
 interface PheasantNetworkDisputeManagerInterface {
     function verifyBlockHeader(bytes32 blockHash, bytes[] calldata blockHeaderRaw) external pure returns (bool);
@@ -60,6 +61,7 @@ contract PheasantNetworkBridgeChild is Ownable {
     uint256 internal userDepositThreshold;
     mapping(address => Trade[]) internal trades;
     mapping(address => mapping(uint256 => Evidence)) internal evidences;
+    mapping(address => mapping(uint256 => bytes32)) internal hashedEvidences;
     mapping(address => uint256) internal relayerBond;
     mapping(address => uint256) internal relayerAsset;
     mapping(address => uint256) internal userDeposit;
@@ -112,7 +114,7 @@ contract PheasantNetworkBridgeChild is Ownable {
         return owner();
     }
 
-    function createTradeTo2ndLayer(
+    function createUpwardTrade(
         uint256 amount,
         address to,
         uint256 fee,
@@ -141,10 +143,10 @@ contract PheasantNetworkBridgeChild is Ownable {
         );
 
         userTradeList.push(UserTrade(msg.sender, trades[msg.sender].length - 1));
-        evidences[msg.sender][trades[msg.sender].length - 1] = evidence;
-
+        hashedEvidences[msg.sender][trades[msg.sender].length - 1] = hashEvidence(evidence);
         emit NewTrade(msg.sender, tokenTypeIndex, amount);
     }
+
 
     function accept(address user, uint256 index) external {
         Trade memory trade = getTrade(user, index);
@@ -152,12 +154,12 @@ contract PheasantNetworkBridgeChild is Ownable {
 
         trade.status = STATUS_PAID;
         trades[user][index] = trade;
-        relayerAsset[msg.sender] = relayerAsset[msg.sender].sub(trade.amount.add(trade.fee));
+        relayerAsset[msg.sender] = relayerAsset[msg.sender].sub(trade.amount.sub(trade.fee));
 
         emit Accept(msg.sender, user, index);
 
         IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
-        require(token.transfer(trade.user, trade.amount - trade.fee), "Transfer Fail");
+        require(token.transfer(trade.user, trade.amount.sub(trade.fee)), "Transfer Fail");
     }
 
     function newTrade(
@@ -420,6 +422,71 @@ contract PheasantNetworkBridgeChild is Ownable {
         require(keccak256(evidences[user][index].blockNumber) != keccak256(bytes("")), "No Evidence");
         return evidences[user][index];
     }
+
+    function getHashedEvidence(address user, uint256 index) public view returns (bytes32) {
+        require(hashedEvidences[user][index] != keccak256(bytes("")), "No Evidence");
+        return hashedEvidences[user][index];
+    }
+
+
+    /*function getHashedEvidence(Evidence calldata evidence) internal view returns (bytes32){
+         return keccak256(abi.encodePacked(
+            evidence.blockNumber,
+            evidence.blockHash,
+            encodeBytesArray(evidence.txReceiptProof),
+            encodeBytesArray(evidence.txProof),
+            evidence.transaction,
+            encodeUint8Array(evidence.txDataSpot),
+            encodeUint8Array(evidence.path),
+            evidence.txReceipt,
+            encodeBytesArray(evidence.rawTx),
+            encodeBytesArray(evidence.rawBlockHeader)
+        ));
+    }*/
+
+    function hashEvidence(Evidence calldata evidence) internal pure returns (bytes32){
+         return keccak256(bytes.concat(
+             encodeBlockEvidence(evidence),
+             encodeTxEvidence(evidence)
+        ));
+    }
+
+    function encodeBlockEvidence(Evidence calldata evidence) internal pure returns (bytes memory){
+        return abi.encodePacked(
+            evidence.blockNumber,
+            evidence.blockHash,
+            encodeBytesArray(evidence.rawBlockHeader)
+        );
+    }
+
+    function encodeTxEvidence(Evidence calldata evidence) internal pure returns (bytes memory){
+        return abi.encodePacked(
+            encodeBytesArray(evidence.txReceiptProof),
+            encodeBytesArray(evidence.txProof),
+            evidence.transaction,
+            encodeUint8Array(evidence.txDataSpot),
+            encodeUint8Array(evidence.path),
+            evidence.txReceipt,
+            encodeBytesArray(evidence.rawTx)
+        );
+    }
+
+    function encodeBytesArray(bytes[] memory array) internal pure returns(bytes memory encoded) {
+        for (uint i = 0; i < array.length; i++) {
+            encoded = bytes.concat(
+                encoded, abi.encodePacked(array[i])
+            );
+        }
+    }
+
+    function encodeUint8Array(uint8[] memory array) internal pure returns(bytes memory encoded) {
+        for (uint i = 0; i < array.length; i++) {
+            encoded = bytes.concat(
+                encoded, abi.encodePacked(array[i])
+            );
+        }
+    }
+
 
     function toUint256(bytes memory _bytes, uint256 _start) internal pure returns (uint256) {
         require(_bytes.length >= _start + 32, "toUint256_outOfBounds");

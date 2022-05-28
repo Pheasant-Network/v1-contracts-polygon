@@ -55,11 +55,7 @@ class TestData {
     return testAsset[index];
   }
 
-  async setUpTrade(testData, accountIndex, isDeposit = false){
-    if(isDeposit) {
-      await this.token.connect(this.accounts[accountIndex]).approve(this.helper.address, testData.amount);
-    }
-
+  async setUpTrade(testData, accountIndex, isDeposit = false, isGoingUp = false){
     await this.helper.connect(this.accounts[accountIndex]).setUpTrade(
       testData.sender,
       testData.index,
@@ -72,13 +68,27 @@ class TestData {
       testData.status,
       testData.fee,
       testData.disputeTimestamp,
-      isDeposit
+      isGoingUp
     );
+
+    if(isDeposit) {
+      await this.token.connect(this.accounts[accountIndex]).approve(this.helper.address, testData.amount);
+      await this.helper.connect(this.accounts[accountIndex]).setUpDeposit(testData.tokenTypeIndex, testData.amount);
+    }
+
   }
 
 
   async setUpEvidence(user, index, evidence, accountIndex){
     await this.helper.connect(this.accounts[accountIndex]).setUpEvidence(
+      user,
+      index,
+      evidence
+    );
+  }
+
+  async setUpHashedEvidence(user, index, evidence, accountIndex){
+    await this.helper.connect(this.accounts[accountIndex]).setUpHashedEvidence(
       user,
       index,
       evidence
