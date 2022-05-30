@@ -162,6 +162,46 @@ contract PheasantNetworkBridgeChild is Ownable {
         require(token.transfer(trade.user, trade.amount.sub(trade.fee)), "Transfer Fail");
     }
 
+    /*function newDispute(address user, uint256 index) external {
+        Trade memory trade = getTrade(user, index);
+        require(trade.status == STATUS_PAID, "Can't dispute before withdraw");
+
+        trade.status = STATUS_DISPUTE;
+        trade.disputeTimestamp = block.timestamp;
+        trades[user][index] = trade;
+        disputeList[trade.relayer].push(UserTrade(user, index));
+
+        emit Dispute(user, index);
+    }
+
+    function newSlash(address disputer, address user, uint256 index, Evidence calldata evidence) external {
+        Trade memory trade = getTrade(user, index);
+        require(trade.status == STATUS_DISPUTE, "Slashes must run after dispute");
+
+        require(getHashedEvidence(user, index) == hashEvidence(evidence), "Not same evideces");
+        require(disputeManager.checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee), "Invalid Tx Data");
+        require(disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader), "Invalid BlockHeader");
+        require(disputeManager.verifyProof(keccak256(evidence.transaction), evidence.txProof, evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX], evidence.path), "Invalid Tx Proof");
+        require(disputeManager.verifyRawTx(evidence.transaction, evidence.rawTx), "Invalid Tx elements");
+        require(disputeManager.verifyTxSignature(trade.relayer, evidence.rawTx), "Invalid Tx elements");
+        //uint256 blockNumber = uint256(RLPDecoder.toUintX(evidence.blockNumber, 0));
+        //require(disputeManager.verifyBlockHash(evidence.blockHash, blockNumber), "Invalid blockHash");
+
+        uint256 relayerBondAmount = relayerBond[trade.relayer];
+        relayerBond[trade.relayer] = 0;
+
+        trade.status = STATUS_SLASHED;
+        trades[user][index] = trade;
+
+        emit Slash(user, index, trade.relayer);
+
+        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+        require(token.transfer(disputer, relayerBondAmount), "Transfer Fail");
+    }*/
+
+
+
+
     function newTrade(
         uint256 amount,
         address to,
@@ -412,10 +452,6 @@ contract PheasantNetworkBridgeChild is Ownable {
         IERC20 token = IERC20(tokenAddressL2[trade.tokenTypeIndex]);
         if (!token.transfer(msg.sender, trade.amount)) return;
 
-    }
-
-    function decodeNode(bytes memory item) public pure returns (bytes[] memory) {
-        return RLPDecoder.decode(item);
     }
 
     function getEvidence(address user, uint256 index) public view returns (Evidence memory) {
