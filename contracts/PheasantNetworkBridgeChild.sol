@@ -284,7 +284,7 @@ contract PheasantNetworkBridgeChild is Ownable {
 
     function bid(address user, uint256 index) internal {
         Trade memory trade = getTrade(user, index);
-        if (trade.status != STATUS_START) return;
+        require(trade.status == STATUS_START, "Invalid Status");
         trade.relayer = msg.sender;
         trade.status = STATUS_BID;
         trades[user][index] = trade;
@@ -324,9 +324,9 @@ contract PheasantNetworkBridgeChild is Ownable {
     ) internal {
         //require(block.number >= toUint256(evidence.blockNumber) + SUBMIT_LIMIT_BLOCK_INTERVAL); //TODO
         Trade memory trade = getTrade(user, index);
-        if (trade.status != STATUS_BID) return;
-        if (trade.relayer != msg.sender) return;
-        if (!disputeManager.checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee)) return;
+        require(trade.status == STATUS_BID, "Withdraw must run after bid");
+        require(trade.relayer == msg.sender, "Only Relayer can submit Evidences");
+        require(disputeManager.checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee), "Invalid Tx Data");
 
         trade.status = STATUS_PAID;
         evidences[user][index] = evidence;
@@ -335,7 +335,7 @@ contract PheasantNetworkBridgeChild is Ownable {
         emit Withdraw(msg.sender, user, index);
 
         IERC20 token = IERC20(tokenAddressL2[trade.tokenTypeIndex]);
-        if (!token.transfer(msg.sender, trade.amount)) return;
+        require(token.transfer(msg.sender, trade.amount), "Transfer Fail");
 
     }
 

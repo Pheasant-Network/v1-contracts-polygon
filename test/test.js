@@ -118,7 +118,7 @@ describe("PheasantNetworkBridgeChild", function () {
 
   it("newTrade invalid tokeyTypeIndex", async function () {
 
-    const testTradeData = testData.getTradeData(4);
+    const testTradeData = testData.getTradeData(24);
     await testToken.connect(accounts[0]).approve(pheasantNetworkBridgeChild.address, testTradeData.amount);
     await expect(
       pheasantNetworkBridgeChild.connect(accounts[0]).newTrade(testTradeData.amount, testTradeData.to, testTradeData.fee, testTradeData.tokenTypeIndex)
@@ -168,14 +168,14 @@ describe("PheasantNetworkBridgeChild", function () {
   it("bid Can't re-bid", async function () {
     const testTradeData = testData.getTradeData(5);
     await testData.setUpTrade(testTradeData, 0);
-    await helper.connect(accounts[0]).helperBid(testTradeData.user, testTradeData.index);
-    trade = await helper.getTrade(testTradeData.user, testTradeData.index);
-    assert.equal(trade.relayer, testTradeData.relayer)
+    await expect(
+      helper.connect(accounts[0]).helperBid(testTradeData.user, testTradeData.index)
+    ).to.be.revertedWith("Invalid Status");
   });
 
   it("bulkBid", async function () {
 
-    const testTradeData = testData.getTradeData(0);
+    const testTradeData = testData.getTradeData(4);
     const testTradeData2 = testData.getTradeData(6);
     await testData.setUpTrade(testTradeData, 0);
     await testData.setUpTrade(testTradeData2, 0);
@@ -211,18 +211,9 @@ describe("PheasantNetworkBridgeChild", function () {
       {userAddress: testTradeData2.user, index: testTradeData2.index}
     ]
 
-    await helper.connect(accounts[0]).bulkBid(userTrades);
-    let trade = await helper.getTrade(testTradeData.user, testTradeData.index);
-    let expectedData = testTradeData
-    expectedData.status = "1"
-    expectedData.relayer = accounts[0].address
-    tradeAssert(expectedData, trade, false);
-
-    trade = await helper.getTrade(testTradeData2.user, testTradeData2.index);
-    expectedData = testTradeData2
-    expectedData.status = "1"
-    expectedData.relayer = accounts[1].address
-    tradeAssert(expectedData, trade, false);
+    await expect(
+      helper.connect(accounts[0]).bulkBid(userTrades)
+    ).to.be.revertedWith("Invalid Status");
 
   });
 
@@ -254,13 +245,9 @@ describe("PheasantNetworkBridgeChild", function () {
     mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, false]);
 
     const InitialBalance = await testToken.balanceOf(testTradeData.relayer);
-    await helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence);
-    const trade = await helper.getTrade(accounts[0].address, 0);
-    const expectedData = testTradeData
-    expectedData.status = "1"
-    tradeAssert(expectedData, trade, false);
-    const balance = await testToken.balanceOf(testTradeData.relayer);
-    assert.equal(balance.toString(), InitialBalance.toString())
+    await expect(
+      helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence)
+    ).to.be.revertedWith("Invalid Tx Data");
 
   });
 
@@ -271,12 +258,9 @@ describe("PheasantNetworkBridgeChild", function () {
     mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
     //NO BID
     const evidence = testData.getEvidenceData(0);
-    await helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence);
-    const trade = await helper.getTrade(accounts[0].address, 0);
-    tradeAssert(testTradeData, trade, false);
-
-    const balance = await testToken.balanceOf(accounts[2].address);
-    assert.equal(balance.toString(), 0)
+    await expect(
+      helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence)
+    ).to.be.revertedWith("Withdraw must run after bid");
 
   });
 
@@ -288,12 +272,9 @@ describe("PheasantNetworkBridgeChild", function () {
     mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
 
     const InitialBalance = await testToken.balanceOf(accounts[0].address);
-    await helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence); //invalid Relayer
-    const trade = await helper.getTrade(accounts[0].address, 0);
-
-    tradeAssert(testTradeData, trade, false);
-    const balance = await testToken.balanceOf(accounts[0].address);
-    assert.equal(balance.toString(), InitialBalance.toString())
+    await expect(
+      helper.connect(accounts[0]).helperWithdraw(accounts[0].address, 0, evidence) //invalid Relayer
+    ).to.be.revertedWith("Only Relayer can submit Evidences");
 
   });
 
@@ -346,17 +327,9 @@ describe("PheasantNetworkBridgeChild", function () {
       testData.getEvidenceData(0)
     ]
 
-    await helper.connect(accounts[0]).bulkWithdraw(userTrades , evidences);
-    trade = await helper.getTrade(testTradeData.user, testTradeData.index);
-    const expectedData = testTradeData
-    expectedData.status = "2"
-    tradeAssert(expectedData, trade, false);
-
-    trade = await helper.getTrade(testTradeData2.user, testTradeData2.index);
-    const expectedData2 = testTradeData2
-    expectedData2.status = "2"
-    tradeAssert(expectedData2, trade, false);
-
+    await expect(
+      helper.connect(accounts[0]).bulkWithdraw(userTrades , evidences)
+    ).to.be.revertedWith("Withdraw must run after bid");
 
   });
 
