@@ -3,10 +3,10 @@ require('dotenv').config({ path: '../.env' });
 const Web3 = require('web3');
 const readlineSync = require('readline-sync')
 const fs = require('fs');
-const utils = require('../migrations/utils')
+const utils = require('./utils')
 
-const childManager = JSON.parse(fs.readFileSync('../build/contracts/PolygonChildCheckPointManager.json', 'utf8'));
-const rootManager = JSON.parse(fs.readFileSync('../build/contracts/PolygonRootCheckPointManager.json', 'utf8'));
+const childManager = JSON.parse(fs.readFileSync('../artifacts/contracts/tunnel/PolygonChildCheckPointManager.sol/PolygonChildCheckPointManager.json', 'utf8'));
+const rootManager = JSON.parse(fs.readFileSync('../artifacts/contracts/tunnel/PolygonRootCheckPointManager.sol/PolygonRootCheckPointManager.json', 'utf8'));
 let contractAddressObj = utils.getContractAddresses("../")
 const childAbi = childManager.abi;
 const rootAbi = rootManager.abi;

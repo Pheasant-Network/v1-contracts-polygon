@@ -30,9 +30,16 @@ module.exports = {
    mumbai: {
      url: process.env.PROVIDER_MUMBAI,
      chainId: 80001,
-     gasPrice: 10000000000,
+     //gasPrice: 10000000000,
+     accounts: {mnemonic: process.env.MNEMONIC}
+   },
+   goerli: {
+     url: process.env.PROVIDER_GOERLI,
+     chainId: 5,
+     //gasPrice: 10000000000,
      accounts: {mnemonic: process.env.MNEMONIC}
    }
+
  },
  solidity: {
     version: "0.8.9",
