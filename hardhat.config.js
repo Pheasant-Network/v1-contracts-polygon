@@ -41,6 +41,10 @@ module.exports = {
    }
 
  },
+ gasReporter: {
+   currency: 'USD',
+   token: 'MATIC'
+ },
  solidity: {
     version: "0.8.9",
     settings: {
