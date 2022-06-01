@@ -221,7 +221,7 @@ describe("PheasantNetworkBridgeChild", function () {
 
     const testTradeData = testData.getTradeData(2);
     await testData.setUpTrade(testTradeData, 0, true);
-    const evidence = testData.getEvidenceData(2);
+    const evidence = testData.getEvidenceData(0);
     mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
 
     const InitialBalance = await testToken.balanceOf(accounts[0].address);
@@ -230,9 +230,6 @@ describe("PheasantNetworkBridgeChild", function () {
     const expectedData = testTradeData
     expectedData.status = "2"
     tradeAssert(expectedData, trade, false);
-    const hashedEvidence = await helper.getHashedEvidence(accounts[0].address, 0);
-    const expectHashedEvidence = await helper.helperHashEvidence(evidence);
-    assert.equal(hashedEvidence, expectHashedEvidence)
 
     const balance = await testToken.balanceOf(accounts[0].address);
     assert.equal(balance.toString(), InitialBalance.add(testTradeData.amount).toString())
@@ -392,6 +389,11 @@ describe("PheasantNetworkBridgeChild", function () {
 
     await testData.setUpTrade(testTradeData, 0, true);
 
+    await testToken.connect(accounts[0]).approve(helper.address, userDepositThreshold);
+    let userBalance = await helper.getUserDepositBalance(accounts[0].address);
+    assert.equal(userBalance.toString(), 0)
+    const initialBalance = await testToken.balanceOf(helper.address);
+
     await hre.ethers.provider.send("evm_increaseTime", [3580]) //around 1 hour later.
     await hre.ethers.provider.send("evm_mine")
 
@@ -405,11 +407,19 @@ describe("PheasantNetworkBridgeChild", function () {
     const disputeList = await helper.connect(accounts[1]).getDisputeList();
     assert.equal(disputeList[0].userAddress, accounts[0].address)
 
+    let balance = await testToken.balanceOf(helper.address);
+    assert.equal(balance.toString(), initialBalance.add(userDepositThreshold).toString())
+
+    userBalance = await helper.getUserDepositBalance(accounts[0].address);
+    assert.equal(userBalance.toString(), userDepositThreshold.toString())
+
+
+
 
   });
 
 
-  /*it("dispute invalid timestamp", async function () {
+  it("dispute invalid timestamp", async function () {
 
     const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
     const testTradeData = testData.getTradeData(14, lastestBlock.timestamp);
@@ -426,7 +436,9 @@ describe("PheasantNetworkBridgeChild", function () {
 
 
 
-  });*/
+  });
+
+
 
   it("dispute invalid status", async function () {
     const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
@@ -437,7 +449,7 @@ describe("PheasantNetworkBridgeChild", function () {
     await testToken.connect(accounts[0]).approve(helper.address, userDepositThreshold);
     await expect(
       helper.connect(accounts[0]).dispute(0),
-    ).to.be.revertedWith("Can't dispute before paid");
+    ).to.be.revertedWith("Can't dispute before withdraw");
 
 
   });
@@ -445,94 +457,114 @@ describe("PheasantNetworkBridgeChild", function () {
 
   it("slash", async function () {
 
-    const testTradeData = testData.getTradeData(16);
+    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
+    const testTradeData = testData.getTradeData(16, lastestBlock.timestamp);
     await testData.setUpTrade(testTradeData, 0, true);
     const testBondData = testData.getBondData(0);
     await testData.setUpBalance(testBondData.bond, 1)
     await testData.setUpBond(testBondData.bond, 1)
-    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [false, true, true, true, true, true]);
+    await testData.setUpUserDeposit(userDepositThreshold, 0)
 
-    const evidence = testData.getEvidenceData(3);
-    await testData.setUpHashedEvidence(accounts[0].address, 0, evidence, 0)
+    await hre.ethers.provider.send("evm_increaseTime", [3660])
+    await hre.ethers.provider.send("evm_mine")
+
 
     const initialUserBalance = await testToken.balanceOf(accounts[0].address);
-    const disputerInitialUserBalance = await testToken.balanceOf(accounts[2].address);
-    await helper.connect(accounts[2]).slash(accounts[0].address, 0, evidence);
+    await helper.connect(accounts[0]).slash(0);
     const trade = await helper.getTrade(accounts[0].address, 0);
     const expectedData = testTradeData
     expectedData.status = "4"
     tradeAssert(expectedData, trade, false);
 
+    const userBalance = await helper.getUserDepositBalance(accounts[0].address);
+    assert.equal(userBalance.toString(), 0)
     const relayerBalance = await helper.getRelayerBondBalance(accounts[1].address);
     assert.equal(relayerBalance.toString(), 0)
-
     const balance = await testToken.balanceOf(accounts[0].address);
-    assert.equal(balance.toString(), initialUserBalance.add(testBondData.bond / 2).toString())
-    const disputerBalance = await testToken.balanceOf(accounts[2].address);
-    assert.equal(disputerBalance.toString(), disputerInitialUserBalance.add(testBondData.bond / 2).toString())
-
+    assert.equal(balance.toString(), initialUserBalance.add(testBondData.bond).add(userDepositThreshold).toString())
 
   });
 
 
-  it("slash, invalid status", async function () {
+  it("slash invalid status", async function () {
 
-    const testTradeData = testData.getTradeData(17);
+    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
+    const testTradeData = testData.getTradeData(17, lastestBlock.timestamp);
     await testData.setUpTrade(testTradeData, 0, true);
     const testBondData = testData.getBondData(0);
     await testData.setUpBalance(testBondData.bond, 1)
     await testData.setUpBond(testBondData.bond, 1)
-    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [false, true, true, true, true, true]);
+    await testData.setUpUserDeposit(userDepositThreshold, 0)
 
-    const evidence = testData.getEvidenceData(3);
-    await testData.setUpHashedEvidence(accounts[0].address, 0, evidence, 0)
+    await hre.ethers.provider.send("evm_increaseTime", [3660])
+    await hre.ethers.provider.send("evm_mine")
 
     await expect(
-      helper.connect(accounts[2]).slash(accounts[0].address, 0, evidence)
+      helper.connect(accounts[0]).slash(0),
     ).to.be.revertedWith("Slashes must run after dispute");
 
 
   });
 
-  it("slash, different evidence", async function () {
+  it("slash invalid timestamp", async function () {
 
-    const testTradeData = testData.getTradeData(18);
+    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
+    const testTradeData = testData.getTradeData(18, lastestBlock.timestamp);
     await testData.setUpTrade(testTradeData, 0, true);
     const testBondData = testData.getBondData(0);
     await testData.setUpBalance(testBondData.bond, 1)
     await testData.setUpBond(testBondData.bond, 1)
-    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [false, true, true, true, true, true]);
+    await testData.setUpUserDeposit(userDepositThreshold, 0)
 
-    const evidence = testData.getEvidenceData(3); 
-    await testData.setUpHashedEvidence(accounts[0].address, 0, evidence, 0)
+    await hre.ethers.provider.send("evm_increaseTime", [3480])
+    await hre.ethers.provider.send("evm_mine")
 
-    const differentEvidence = testData.getEvidenceData(0); 
     await expect(
-      helper.connect(accounts[2]).slash(accounts[0].address, 0, differentEvidence)
-    ).to.be.revertedWith("Different from the evidence previously submitted");
+      helper.connect(accounts[0]).slash(0),
+    ).to.be.revertedWith("A certain time must elapse after dispute");
 
 
   });
 
-  it("slash, submitted evidence is correct. no slash", async function () {
 
-    const testTradeData = testData.getTradeData(18);
+  it("submitEvidence", async function () {
+    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
+    const testTradeData = testData.getTradeData(19, lastestBlock.timestamp);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
     await testData.setUpTrade(testTradeData, 0, true);
     const testBondData = testData.getBondData(0);
     await testData.setUpBalance(testBondData.bond, 1)
     await testData.setUpBond(testBondData.bond, 1)
-    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
+    await testData.setUpUserDeposit(userDepositThreshold, 0)
+    const evidence = testData.getEvidenceData(1);
+    await testData.setUpEvidence(testTradeData.user, testTradeData.index, evidence, 0)
 
-    const evidence = testData.getEvidenceData(3);
-    await testData.setUpHashedEvidence(accounts[0].address, 0, evidence, 0)
-
-    await helper.connect(accounts[2]).slash(accounts[0].address, 0, evidence);
-    const trade = await helper.getTrade(accounts[0].address, 0);
+    const relayerBalance = await testToken.balanceOf(accounts[1].address);
+    const submission = testData.getEvidenceData(2);
+    await helper.connect(accounts[1]).submitEvidence(accounts[0].address, 0, submission);
+    trade = await helper.getTrade(accounts[0].address, 0);
     const expectedData = testTradeData
+    expectedData.status = "5"
     tradeAssert(expectedData, trade, false);
 
+    balance = await testToken.balanceOf(accounts[1].address);
+    assert.equal(balance.toString(), relayerBalance.add(userDepositThreshold).toString());
+    userBalance = await helper.getUserDepositBalance(accounts[0].address);
+    assert.equal(userBalance.toString(), 0)
   });
 
+  it("submitEvidence Invalid status", async function () {
+    const lastestBlock = await network.provider.send('eth_getBlockByNumber', ['latest', false]);
+    const testTradeData = testData.getTradeData(23, lastestBlock.timestamp);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
+    await testData.setUpTrade(testTradeData, 0, true);
+    const relayerBalance = await testToken.balanceOf(accounts[1].address);
+    const submission = testData.getEvidenceData(2);
+    await expect(
+      helper.connect(accounts[1]).submitEvidence(accounts[0].address, 0, submission),
+    ).to.be.revertedWith("Invalid Status");
+
+  });
 
   it("depositBond", async function () {
 
@@ -635,6 +667,24 @@ describe("PheasantNetworkBridgeChild", function () {
     tradeAssert(expectedData, trade, false);
     assert.equal(relayerBalance.toString(), initialRelayerBalance.sub(testTradeData.amount - testTradeData.fee).toString())
   });
+
+  /*it("newDispute", async function () {
+    const testTradeData = testData.getTradeData(27);
+    await testData.setUpTrade(testTradeData, 0, false, true);
+    const testAssetData = testData.getAssetData(2);
+    await testData.setUpAsset(testAssetData.asset, 0)
+    const evidence = testData.getEvidenceData(3);
+    await testData.setUpHashedEvidence(accounts[0].address, 0, evidence, 0)
+    await helper.connect(accounts[0]).newDispute(testTradeData.user, testTradeData.index);
+    const trade = await helper.getTrade(accounts[0].address, 0);
+    const expectedData = testTradeData
+    expectedData.status = "3"
+    tradeAssert(expectedData, trade, false);
+    assert.notEqual(trade.disputeTimestamp, trade.timestamp)
+  });*/
+
+
+
 
 });
 
