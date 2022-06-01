@@ -604,6 +604,88 @@ describe("PheasantNetworkBridgeChild", function () {
     assert.equal(l2Address, testToken.address)
   });
 
+
+  it("depositAsset", async function () {
+
+    const testAssetData = testData.getAssetData(1);
+    await testToken.connect(accounts[0]).approve(helper.address, testAssetData.asset);
+    let initialBalance = await testToken.balanceOf(helper.address);
+    let userBalance = await testToken.balanceOf(accounts[0].address);
+    let initialRelayerBalance = await helper.getRelayerAssetBalance(accounts[0].address);
+
+    await helper.connect(accounts[0]).depositAsset(testAssetData.asset);
+    let balance = await testToken.balanceOf(helper.address);
+    assert.equal(balance.toString(), initialBalance.add(testAssetData.asset).toString())
+    balance = await testToken.balanceOf(accounts[0].address);
+    assert.equal(balance.toString(), userBalance.sub(testAssetData.asset).toString())
+
+    relayerBalance = await helper.getRelayerAssetBalance(accounts[0].address);
+    assert.equal(relayerBalance.toString(), initialRelayerBalance.add(testAssetData.asset).toString())
+
+  });
+
+  it("withdrawAsset", async function () {
+    const testAssetData = testData.getAssetData(1);
+    await testData.setUpAsset(testAssetData.asset, 0)
+    await helper.connect(accounts[0]).withdrawAsset();
+    let balance = await testToken.balanceOf(helper.address);
+    assert.equal(balance.toString(), 0)
+    let relayerBalance = await helper.getRelayerAssetBalance(accounts[0].address);
+    assert.equal(relayerBalance.toString(), 0)
+  });
+
+
+  it("createUpwardTrade", async function () {
+    const testTradeData = testData.getTradeData(25);
+    const evidence = testData.getEvidenceData(3);
+    mockDisputeManager = await setUpMockDisputeManager(mockDisputeManager, [true, true, true, true, true, true]);
+
+    await testToken.connect(accounts[0]).approve(helper.address, testTradeData.amount);
+    await helper.connect(accounts[0]).createUpwardTrade(testTradeData.amount, testTradeData.to, testTradeData.fee, testTradeData.tokenTypeIndex, evidence);
+
+    const trade = await helper.getTrade(accounts[0].address, 0);
+    const hashedEvidence = await helper.getHashedEvidence(accounts[0].address, 0);
+    const expectHashedEvidence = await helper.helperHashEvidence(evidence);
+    assert.equal(hashedEvidence, expectHashedEvidence)
+    tradeAssert(testTradeData, trade, false);
+  });
+
+  it("accept", async function () {
+    const testTradeData = testData.getTradeData(25);
+    await testData.setUpTrade(testTradeData, 0, false, true);
+    const testAssetData = testData.getAssetData(2);
+    await testData.setUpAsset(testAssetData.asset, 0)
+    const evidence = testData.getEvidenceData(3);
+    await testData.setUpHashedEvidence(accounts[0].address, 0, evidence, 0)
+    let initialRelayerBalance = await helper.getRelayerAssetBalance(accounts[0].address);
+
+    await helper.connect(accounts[0]).accept(testTradeData.user, testTradeData.index);
+    const trade = await helper.getTrade(accounts[0].address, 0);
+    const expectedData = testTradeData
+    expectedData.status = "2"
+    let relayerBalance = await helper.getRelayerAssetBalance(accounts[0].address);
+    tradeAssert(expectedData, trade, false);
+    assert.equal(relayerBalance.toString(), initialRelayerBalance.sub(testTradeData.amount - testTradeData.fee).toString())
+  });
+
+  /*it("newDispute", async function () {
+    const testTradeData = testData.getTradeData(27);
+    await testData.setUpTrade(testTradeData, 0, false, true);
+    const testAssetData = testData.getAssetData(2);
+    await testData.setUpAsset(testAssetData.asset, 0)
+    const evidence = testData.getEvidenceData(3);
+    await testData.setUpHashedEvidence(accounts[0].address, 0, evidence, 0)
+    await helper.connect(accounts[0]).newDispute(testTradeData.user, testTradeData.index);
+    const trade = await helper.getTrade(accounts[0].address, 0);
+    const expectedData = testTradeData
+    expectedData.status = "3"
+    tradeAssert(expectedData, trade, false);
+    assert.notEqual(trade.disputeTimestamp, trade.timestamp)
+  });*/
+
+
+
+
 });
 
 const tradeAssert = function(rawExpectedData, rawAcutualData, isTimeStampCheck) { 

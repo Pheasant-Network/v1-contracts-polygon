@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {RLPDecoder} from "./RLPDecoder.sol";
+import "hardhat/console.sol";
 
 interface PheasantNetworkDisputeManagerInterface {
     function verifyBlockHeader(bytes32 blockHash, bytes[] calldata blockHeaderRaw) external pure returns (bool);
@@ -60,13 +61,16 @@ contract PheasantNetworkBridgeChild is Ownable {
     uint256 internal userDepositThreshold;
     mapping(address => Trade[]) internal trades;
     mapping(address => mapping(uint256 => Evidence)) internal evidences;
+    mapping(address => mapping(uint256 => bytes32)) internal hashedEvidences;
     mapping(address => uint256) internal relayerBond;
+    mapping(address => uint256) internal relayerAsset;
     mapping(address => uint256) internal userDeposit;
     //uint constant SUBMIT_LIMIT_BLOCK_INTERVAL = 150; //approximately 30 min.
 
     event NewTrade(address indexed userAddress, uint8 tokenTypeIndex, uint256 amount);
     event Bid(address indexed relayer, address indexed userAddress, uint256 index);
     event Withdraw(address indexed relayer, address indexed userAddress, uint256 index);
+    event Accept(address indexed relayer, address indexed userAddress, uint256 index);
     event Dispute(address indexed userAddress, uint256 index);
     event Slash(address indexed userAddress, uint256 index, address indexed relayer);
     event Submit(address indexed relayer, address indexed userAddress, uint256 index);
@@ -90,6 +94,7 @@ contract PheasantNetworkBridgeChild is Ownable {
         uint8 status;
         uint256 fee;
         uint256 disputeTimestamp;
+        bool isUpward;
     }
 
     struct Evidence {
@@ -104,6 +109,107 @@ contract PheasantNetworkBridgeChild is Ownable {
         bytes[] rawTx;
         bytes[] rawBlockHeader;
     }
+
+    function getRelayer() public returns (address){
+        return owner();
+    }
+
+    function createUpwardTrade(
+        uint256 amount,
+        address to,
+        uint256 fee,
+        uint8 tokenTypeIndex,
+        Evidence calldata evidence
+    ) public payable {
+        require(tokenTypeIndex == ETH_TOKEN_INDEX, "Only ETH Support for now");
+        //TODO can't send eth over the threshold
+        require(disputeManager.checkTransferTx(evidence.transaction, to, amount - fee), "Invalid Evidence");
+        address relayer = getRelayer();
+
+        trades[msg.sender].push(
+            Trade(
+                trades[msg.sender].length,
+                msg.sender,
+                tokenTypeIndex,
+                amount,
+                block.timestamp,
+                to,
+                relayer,
+                STATUS_START,
+                fee,
+                block.timestamp,
+                true
+            )
+        );
+
+        userTradeList.push(UserTrade(msg.sender, trades[msg.sender].length - 1));
+        hashedEvidences[msg.sender][trades[msg.sender].length - 1] = hashEvidence(evidence);
+        emit NewTrade(msg.sender, tokenTypeIndex, amount);
+    }
+
+
+    function accept(address user, uint256 index) external {
+        Trade memory trade = getTrade(user, index);
+        require(trade.status == STATUS_START, "Acceptance can be granted only once");
+
+        trade.status = STATUS_PAID;
+        trades[user][index] = trade;
+        relayerAsset[msg.sender] = relayerAsset[msg.sender].sub(trade.amount.sub(trade.fee));
+
+        emit Accept(msg.sender, user, index);
+
+        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+        require(token.transfer(trade.user, trade.amount.sub(trade.fee)), "Transfer Fail");
+    }
+
+    /*function newDispute(address user, uint256 index) external {
+        Trade memory trade = getTrade(user, index);
+        if(trade.isUpward) {
+            //TODO after the period, users can dispute
+            require(trade.status == STATUS_START, "Can't dispute after paid");
+        } else {
+            require(trade.status == STATUS_PAID, "Can't dispute before paid");
+        }
+
+        trade.status = STATUS_DISPUTE;
+        trade.disputeTimestamp = block.timestamp;
+        trades[user][index] = trade;
+        disputeList[trade.relayer].push(UserTrade(user, index));
+
+        emit Dispute(user, index);
+    }
+
+    function isValidEvidence(Trade memory trade, Evidence calldata evidence) public view returns (bool){
+        uint256 blockNumber = uint256(RLPDecoder.toUintX(evidence.blockNumber, 0));
+        return disputeManager.checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee)
+            && disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader) 
+            && disputeManager.verifyProof(keccak256(evidence.transaction), evidence.txProof, evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX], evidence.path)
+            && disputeManager.verifyRawTx(evidence.transaction, evidence.rawTx)
+            && disputeManager.verifyBlockHash(evidence.blockHash, blockNumber);
+    }
+
+    function newSlash(address disputer, address user, uint256 index, Evidence calldata evidence) external {
+        Trade memory trade = getTrade(user, index);
+        require(trade.status == STATUS_DISPUTE, "Slashes must run after dispute");
+
+        require(getHashedEvidence(user, index) == hashEvidence(evidence), "Not same evideces");
+        if(
+            (!trade.isUpward && !isValidEvidence(trade, evidence))
+           || (trade.isUpward && isValidEvidence(trade, evidence))
+        ) {
+            uint256 relayerBondAmount = relayerBond[trade.relayer];
+            relayerBond[trade.relayer] = 0;
+    
+            trade.status = STATUS_SLASHED;
+            trades[user][index] = trade;
+    
+            emit Slash(user, index, trade.relayer);
+    
+            IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+            require(token.transfer(disputer, relayerBondAmount), "Transfer Fail");
+
+        }
+    }*/
 
     function newTrade(
         uint256 amount,
@@ -123,7 +229,8 @@ contract PheasantNetworkBridgeChild is Ownable {
                 address(0x0),
                 STATUS_START,
                 fee,
-                block.timestamp
+                block.timestamp,
+                false
             )
         );
 
@@ -269,6 +376,23 @@ contract PheasantNetworkBridgeChild is Ownable {
         return userDeposit[account];
     }
 
+    function getRelayerAssetBalance(address account) external view returns (uint256) {
+        return relayerAsset[account];
+    }
+
+    function depositAsset(uint256 amount) external {
+        relayerAsset[msg.sender] = relayerAsset[msg.sender].add(amount);
+        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+        require(token.transferFrom(msg.sender, address(this), amount), "Transfer Fail");
+    }
+
+    function withdrawAsset() external {
+        uint256 amount = relayerAsset[msg.sender];
+        relayerAsset[msg.sender] = 0;
+        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+        require(token.transfer(msg.sender, amount), "Transfer Fail");
+    }
+
     function depositBond(uint256 amount) external {
         relayerBond[msg.sender] = relayerBond[msg.sender].add(amount);
         IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
@@ -339,24 +463,74 @@ contract PheasantNetworkBridgeChild is Ownable {
 
     }
 
-    function decodeNode(bytes memory item) public pure returns (bytes[] memory) {
-        return RLPDecoder.decode(item);
-    }
-
     function getEvidence(address user, uint256 index) public view returns (Evidence memory) {
         require(keccak256(evidences[user][index].blockNumber) != keccak256(bytes("")), "No Evidence");
         return evidences[user][index];
     }
 
-    function toUint256(bytes memory _bytes, uint256 _start) internal pure returns (uint256) {
-        require(_bytes.length >= _start + 32, "toUint256_outOfBounds");
-        uint256 tempUint;
-
-        assembly {
-            tempUint := mload(add(add(_bytes, 0x20), _start))
-        }
-
-        return tempUint;
+    function getHashedEvidence(address user, uint256 index) public view returns (bytes32) {
+        require(hashedEvidences[user][index] != keccak256(bytes("")), "No Evidence");
+        return hashedEvidences[user][index];
     }
+
+
+    /*function getHashedEvidence(Evidence calldata evidence) internal view returns (bytes32){
+         return keccak256(abi.encodePacked(
+            evidence.blockNumber,
+            evidence.blockHash,
+            encodeBytesArray(evidence.txReceiptProof),
+            encodeBytesArray(evidence.txProof),
+            evidence.transaction,
+            encodeUint8Array(evidence.txDataSpot),
+            encodeUint8Array(evidence.path),
+            evidence.txReceipt,
+            encodeBytesArray(evidence.rawTx),
+            encodeBytesArray(evidence.rawBlockHeader)
+        ));
+    }*/
+
+    function hashEvidence(Evidence calldata evidence) internal pure returns (bytes32){
+         return keccak256(bytes.concat(
+             encodeBlockEvidence(evidence),
+             encodeTxEvidence(evidence)
+        ));
+    }
+
+    function encodeBlockEvidence(Evidence calldata evidence) internal pure returns (bytes memory){
+        return abi.encodePacked(
+            evidence.blockNumber,
+            evidence.blockHash,
+            encodeBytesArray(evidence.rawBlockHeader)
+        );
+    }
+
+    function encodeTxEvidence(Evidence calldata evidence) internal pure returns (bytes memory){
+        return abi.encodePacked(
+            encodeBytesArray(evidence.txReceiptProof),
+            encodeBytesArray(evidence.txProof),
+            evidence.transaction,
+            encodeUint8Array(evidence.txDataSpot),
+            encodeUint8Array(evidence.path),
+            evidence.txReceipt,
+            encodeBytesArray(evidence.rawTx)
+        );
+    }
+
+    function encodeBytesArray(bytes[] memory array) internal pure returns(bytes memory encoded) {
+        for (uint i = 0; i < array.length; i++) {
+            encoded = bytes.concat(
+                encoded, abi.encodePacked(array[i])
+            );
+        }
+    }
+
+    function encodeUint8Array(uint8[] memory array) internal pure returns(bytes memory encoded) {
+        for (uint i = 0; i < array.length; i++) {
+            encoded = bytes.concat(
+                encoded, abi.encodePacked(array[i])
+            );
+        }
+    }
+
 
 }
