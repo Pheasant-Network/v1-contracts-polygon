@@ -695,6 +695,22 @@ describe("PheasantNetworkBridgeChild", function () {
     assert.equal(relayerBalance.toString(), initialRelayerBalance.sub(testTradeData.amount - testTradeData.fee).toString())
   });
 
+  /*it("newDispute", async function () {
+    const testTradeData = testData.getTradeData(26);
+    await testData.setUpTrade(testTradeData, 0, false, true);
+    const testAssetData = testData.getAssetData(2);
+    await testData.setUpAsset(testAssetData.asset, 0)
+    const evidence = testData.getEvidenceData(3);
+    await testData.setUpHashedEvidence(accounts[0].address, 0, evidence, 0)
+    await helper.connect(accounts[0]).newDispute(testTradeData.user, testTradeData.index);
+    const trade = await helper.getTrade(accounts[0].address, 0);
+    const expectedData = testTradeData
+    expectedData.status = "3"
+    tradeAssert(expectedData, trade, false);
+    assert.notEqual(trade.disputeTimestamp, trade.timestamp)
+  });*/
+
+
 
 
 });

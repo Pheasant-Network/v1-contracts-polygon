@@ -28,7 +28,7 @@ contract Helper is PheasantNetworkBridgeChild {
         uint8 status,
         uint256 fee,
         uint256 disputeTimestamp,
-        bool isGoingUp
+        bool isUpwatd
 
     ) public {
         trades[sender].push(
@@ -43,7 +43,7 @@ contract Helper is PheasantNetworkBridgeChild {
                 status,
                 fee,
                 disputeTimestamp,
-                isGoingUp
+                isUpwatd
             )
         );
         

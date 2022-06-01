@@ -55,7 +55,7 @@ class TestData {
     return testAsset[index];
   }
 
-  async setUpTrade(testData, accountIndex, isDeposit = false, isGoingUp = false){
+  async setUpTrade(testData, accountIndex, isDeposit = false, isUpward = false){
     await this.helper.connect(this.accounts[accountIndex]).setUpTrade(
       testData.sender,
       testData.index,
@@ -68,7 +68,7 @@ class TestData {
       testData.status,
       testData.fee,
       testData.disputeTimestamp,
-      isGoingUp
+      isUpward
     );
 
     if(isDeposit) {

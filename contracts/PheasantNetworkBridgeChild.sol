@@ -94,7 +94,7 @@ contract PheasantNetworkBridgeChild is Ownable {
         uint8 status;
         uint256 fee;
         uint256 disputeTimestamp;
-        bool isGoingUp;
+        bool isUpward;
     }
 
     struct Evidence {
@@ -162,9 +162,14 @@ contract PheasantNetworkBridgeChild is Ownable {
         require(token.transfer(trade.user, trade.amount.sub(trade.fee)), "Transfer Fail");
     }
 
-    /*function newDispute(address user, uint256 index) external {
+    function newDispute(address user, uint256 index) external {
         Trade memory trade = getTrade(user, index);
-        require(trade.status == STATUS_PAID, "Can't dispute before withdraw");
+        if(trade.isUpward) {
+            //TODO after the period, users can dispute
+            require(trade.status == STATUS_START, "Can't dispute after paid");
+        } else {
+            require(trade.status == STATUS_PAID, "Can't dispute before paid");
+        }
 
         trade.status = STATUS_DISPUTE;
         trade.disputeTimestamp = block.timestamp;
@@ -174,33 +179,37 @@ contract PheasantNetworkBridgeChild is Ownable {
         emit Dispute(user, index);
     }
 
+    function isValidEvidence(Trade memory trade, Evidence calldata evidence) public view returns (bool){
+        uint256 blockNumber = uint256(RLPDecoder.toUintX(evidence.blockNumber, 0));
+        return disputeManager.checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee)
+            && disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader) 
+            && disputeManager.verifyProof(keccak256(evidence.transaction), evidence.txProof, evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX], evidence.path)
+            && disputeManager.verifyRawTx(evidence.transaction, evidence.rawTx)
+            && disputeManager.verifyBlockHash(evidence.blockHash, blockNumber);
+    }
+
     function newSlash(address disputer, address user, uint256 index, Evidence calldata evidence) external {
         Trade memory trade = getTrade(user, index);
         require(trade.status == STATUS_DISPUTE, "Slashes must run after dispute");
 
         require(getHashedEvidence(user, index) == hashEvidence(evidence), "Not same evideces");
-        require(disputeManager.checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee), "Invalid Tx Data");
-        require(disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader), "Invalid BlockHeader");
-        require(disputeManager.verifyProof(keccak256(evidence.transaction), evidence.txProof, evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX], evidence.path), "Invalid Tx Proof");
-        require(disputeManager.verifyRawTx(evidence.transaction, evidence.rawTx), "Invalid Tx elements");
-        require(disputeManager.verifyTxSignature(trade.relayer, evidence.rawTx), "Invalid Tx elements");
-        //uint256 blockNumber = uint256(RLPDecoder.toUintX(evidence.blockNumber, 0));
-        //require(disputeManager.verifyBlockHash(evidence.blockHash, blockNumber), "Invalid blockHash");
+        if(
+            (!trade.isUpward && !isValidEvidence(trade, evidence))
+           || (trade.isUpward && isValidEvidence(trade, evidence))
+        ) {
+            uint256 relayerBondAmount = relayerBond[trade.relayer];
+            relayerBond[trade.relayer] = 0;
+    
+            trade.status = STATUS_SLASHED;
+            trades[user][index] = trade;
+    
+            emit Slash(user, index, trade.relayer);
+    
+            IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
+            require(token.transfer(disputer, relayerBondAmount), "Transfer Fail");
 
-        uint256 relayerBondAmount = relayerBond[trade.relayer];
-        relayerBond[trade.relayer] = 0;
-
-        trade.status = STATUS_SLASHED;
-        trades[user][index] = trade;
-
-        emit Slash(user, index, trade.relayer);
-
-        IERC20 token = IERC20(tokenAddressL2[ETH_TOKEN_INDEX]);
-        require(token.transfer(disputer, relayerBondAmount), "Transfer Fail");
-    }*/
-
-
-
+        }
+    }
 
     function newTrade(
         uint256 amount,
@@ -523,16 +532,5 @@ contract PheasantNetworkBridgeChild is Ownable {
         }
     }
 
-
-    function toUint256(bytes memory _bytes, uint256 _start) internal pure returns (uint256) {
-        require(_bytes.length >= _start + 32, "toUint256_outOfBounds");
-        uint256 tempUint;
-
-        assembly {
-            tempUint := mload(add(add(_bytes, 0x20), _start))
-        }
-
-        return tempUint;
-    }
 
 }
