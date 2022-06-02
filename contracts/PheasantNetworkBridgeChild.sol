@@ -210,8 +210,8 @@ contract PheasantNetworkBridgeChild is Ownable {
         require(token.transfer(msg.sender, trade.amount), "Transfer Fail");
     }
 
-    function dispute(uint256 index) external {
-        Trade memory trade = getTrade(msg.sender, index);
+    function dispute(address user, uint256 index) external {
+        Trade memory trade = getTrade(user, index);
         if(trade.isUpward) {
             //TODO after the period, users can dispute
             require(trade.status == STATUS_START, "Can't dispute after paid");
@@ -221,10 +221,10 @@ contract PheasantNetworkBridgeChild is Ownable {
 
         trade.status = STATUS_DISPUTE;
         trade.disputeTimestamp = block.timestamp;
-        trades[msg.sender][index] = trade;
-        disputeList[trade.relayer].push(UserTrade(msg.sender, index));
+        trades[user][index] = trade;
+        disputeList[trade.relayer].push(UserTrade(user, index));
 
-        emit Dispute(msg.sender, index);
+        emit Dispute(user, index);
     }
 
     function isValidEvidence(Trade memory trade, Evidence calldata evidence) public view returns (bool){

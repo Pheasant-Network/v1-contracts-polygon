@@ -395,7 +395,7 @@ describe("PheasantNetworkBridgeChild", function () {
     await hre.ethers.provider.send("evm_increaseTime", [3580]) //around 1 hour later.
     await hre.ethers.provider.send("evm_mine")
 
-    await helper.connect(accounts[0]).dispute(0);
+    await helper.connect(accounts[0]).dispute(accounts[0].address, 0);
     let trade = await helper.getTrade(accounts[0].address, 0);
     const expectedData = testTradeData
     expectedData.status = "3"
@@ -434,9 +434,8 @@ describe("PheasantNetworkBridgeChild", function () {
     await testData.setUpTrade(testTradeData, 0, true);
 
     //NO Withdraw
-    await testToken.connect(accounts[0]).approve(helper.address, userDepositThreshold);
     await expect(
-      helper.connect(accounts[0]).dispute(0),
+      helper.connect(accounts[0]).dispute(accounts[0].address, 0),
     ).to.be.revertedWith("Can't dispute before paid");
 
 
