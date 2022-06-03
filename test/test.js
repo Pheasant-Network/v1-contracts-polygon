@@ -17,8 +17,6 @@ describe("PheasantNetworkBridgeChild", function () {
   let mockDisputeManager;
   let TestToken;
   let testToken;
-  let RLPDecoder;
-  let rlpDecoder;
   let accounts;
   let txParams;
   let helper;
@@ -26,9 +24,7 @@ describe("PheasantNetworkBridgeChild", function () {
   let testData;
   before(async () => {
     TestToken = await hre.ethers.getContractFactory("TestToken");
-    RLPDecoder = await hre.ethers.getContractFactory("RLPDecoder");
     TestDisputeManager = await hre.ethers.getContractFactory("TestDisputeManager");
-    rlpDecoder = await RLPDecoder.deploy();
     accounts =  await ethers.getSigners();
     mockDisputeManager = await deployMockContract(accounts[0], TestDisputeManagerJSON.abi);
     testDisputeManager = await TestDisputeManager.connect(accounts[0]).deploy();
@@ -40,19 +36,11 @@ describe("PheasantNetworkBridgeChild", function () {
       testToken.address
     ]
 
-    const PheasantNetworkBridgeChild = await hre.ethers.getContractFactory("PheasantNetworkBridgeChild", {
-      libraries: {
-        RLPDecoder: rlpDecoder.address,
-      },
-    });
+    const PheasantNetworkBridgeChild = await hre.ethers.getContractFactory("PheasantNetworkBridgeChild");
 
     pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.connect(accounts[0]).deploy(tokenAddressList, userDepositThreshold.toString(), mockDisputeManager.address, accounts[0].address);
 
-    const Helper = await hre.ethers.getContractFactory("Helper", {
-      libraries: {
-        RLPDecoder: rlpDecoder.address,
-      },
-    });
+    const Helper = await hre.ethers.getContractFactory("Helper");
     helper = await Helper.deploy(tokenAddressList, userDepositThreshold.toString(), mockDisputeManager.address, accounts[0].address);
 
     testData = new TestData(accounts, helper, testToken);

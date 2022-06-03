@@ -38,22 +38,12 @@ async function main() {
     disputeManagerAddress = disputeManagerContractAddressObj[hre.network.name].BridgeDisputeManager
   }
 
-  const RLPDecoder = await hre.ethers.getContractFactory("RLPDecoder");
-  const rlpDecoder = await RLPDecoder.deploy();
-  const PheasantNetworkBridgeChild = await hre.ethers.getContractFactory("PheasantNetworkBridgeChild", {
-    libraries: {
-      RLPDecoder: rlpDecoder.address,
-    },
-  });
+  const PheasantNetworkBridgeChild = await hre.ethers.getContractFactory("PheasantNetworkBridgeChild");
 
   const pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.connect(accounts[0]).deploy(tokenAddressList, userDepositThreshold, disputeManagerAddress, newOwner);
 
   console.log("PheasantNetworkBridgeChild address:", pheasantNetworkBridgeChild.address);
-  const Helper = await hre.ethers.getContractFactory("Helper", {
-    libraries: {
-      RLPDecoder: rlpDecoder.address,
-    },
-  });
+  const Helper = await hre.ethers.getContractFactory("Helper");
   const helper = await Helper.deploy(tokenAddressList, userDepositThreshold, disputeManagerAddress, newOwner);
   console.log("Helper address:", helper.address);
 
