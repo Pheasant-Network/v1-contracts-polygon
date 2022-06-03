@@ -3,7 +3,6 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import {RLPDecoder} from "./RLPDecoder.sol";
 import "hardhat/console.sol";
 
 interface PheasantNetworkDisputeManagerInterface {
@@ -96,7 +95,7 @@ contract PheasantNetworkBridgeChild is Ownable {
     }
 
     struct Evidence {
-        bytes blockNumber;
+        uint256 blockNumber;
         bytes32 blockHash;
         bytes[] txReceiptProof;
         bytes[] txProof;
@@ -228,12 +227,12 @@ contract PheasantNetworkBridgeChild is Ownable {
     }
 
     function isValidEvidence(Trade memory trade, Evidence calldata evidence) public view returns (bool){
-        uint256 blockNumber = uint256(RLPDecoder.toUintX(evidence.blockNumber, 0));
+        //uint256 blockNumber = uint256(RLPDecoder.toUintX(evidence.blockNumber, 0));
         return disputeManager.checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee)
             && disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader) 
             && disputeManager.verifyProof(keccak256(evidence.transaction), evidence.txProof, evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX], evidence.path)
             && disputeManager.verifyRawTx(evidence.transaction, evidence.rawTx)
-            && disputeManager.verifyBlockHash(evidence.blockHash, blockNumber);
+            && disputeManager.verifyBlockHash(evidence.blockHash, evidence.blockNumber);
     }
 
     function slash(address user, uint256 index, Evidence calldata evidence) external {
@@ -398,7 +397,7 @@ contract PheasantNetworkBridgeChild is Ownable {
     }
 
     function getEvidence(address user, uint256 index) public view returns (Evidence memory) {
-        require(keccak256(evidences[user][index].blockNumber) != keccak256(bytes("")), "No Evidence");
+        require(evidences[user][index].blockHash != keccak256(bytes("")), "No Evidence");
         return evidences[user][index];
     }
 
