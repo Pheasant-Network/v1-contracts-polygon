@@ -69,8 +69,8 @@ contract PheasantNetworkBridgeChild is Ownable {
     event Bid(address indexed relayer, address indexed userAddress, uint256 index);
     event Withdraw(address indexed relayer, address indexed userAddress, uint256 index);
     event Accept(address indexed relayer, address indexed userAddress, uint256 index);
-    event Dispute(address indexed userAddress, uint256 index);
-    event Slash(address indexed userAddress, uint256 index, address indexed relayer);
+    event Dispute(address indexed userAddress, uint256 indexed index);
+    event Slash(address indexed userAddress, uint256 indexed index, address indexed relayer);
 
     struct UserTrade {
         address userAddress;
@@ -233,6 +233,13 @@ contract PheasantNetworkBridgeChild is Ownable {
             && disputeManager.verifyProof(keccak256(evidence.transaction), evidence.txProof, evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX], evidence.path)
             && disputeManager.verifyRawTx(evidence.transaction, evidence.rawTx)
             && disputeManager.verifyBlockHash(evidence.blockHash, evidence.blockNumber);
+    }
+
+    function checkEvidenceExceptBlockHash(Trade memory trade, Evidence calldata evidence) external view returns (bool){
+        return disputeManager.checkTransferTx(evidence.transaction, trade.to, trade.amount - trade.fee)
+            && disputeManager.verifyBlockHeader(evidence.blockHash, evidence.rawBlockHeader) 
+            && disputeManager.verifyProof(keccak256(evidence.transaction), evidence.txProof, evidence.rawBlockHeader[BLOCKHEADER_TRANSACTIONROOT_INDEX], evidence.path)
+            && disputeManager.verifyRawTx(evidence.transaction, evidence.rawTx);
     }
 
     function slash(address user, uint256 index, Evidence calldata evidence) external {
