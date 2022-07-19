@@ -2,23 +2,23 @@
   "localhost": {
     "PheasantNetworkBridgeChild": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
     "PolygonChildCheckPointManager": "0x16dA340411a92Ba6EDf12C1ad24B1106B425240c",
-    "TestToken": "0xbb41BD3539D3aDcA6a184D8771aEf72D959912cf"
+    "TestToken": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
   },
   "mainnet": {
-    "PolygonRootCheckPointManager": "0x6BC1Fe0c39B3aDC480a43eEa9fb835B0dA8f45a9"
+    "PolygonRootCheckPointManager": "0x9F28AC2c1a2A82db54DFED6B9784a7A950EfEc08"
   },
   "goerli": {
-    "PolygonRootCheckPointManager": "0xf004708BE8e359EC799fA26bA83C8243D3ac1512"
+    "PolygonRootCheckPointManager": "0xef23B98C5b2bf0544D777A26314A6c4F3b23d749"
   },
   "mumbai": {
-    "PolygonChildCheckPointManager": "0x16dA340411a92Ba6EDf12C1ad24B1106B425240c",
+    "PolygonChildCheckPointManager": "0x173fb8c2C1a2506fCC2Cc22A01EAd952008f19D5",
     "WETH": "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
     "TestToken": "0xbb41BD3539D3aDcA6a184D8771aEf72D959912cf",
-    "PheasantNetworkBridgeChild": "0x98238C84B59bFE9C358A5f97828491eEae51b1E4"
+    "PheasantNetworkBridgeChild": "0x0329E253C1C606ab6Db5Bd21d21919F0446B6e38"
   },
   "polygon": {
     "WETH": "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
-    "PolygonChildCheckPointManager": "0xA89C8a2d22e8C43428F376502A77946fB7826852",
-    "PheasantNetworkBridgeChild": "0x27cb8546F60fD5d7869a223F40b8036a9eBe3a4f"
+    "PolygonChildCheckPointManager": "0x42B61d301c6534CB583FDfE16C976637201a1C6D",
+    "PheasantNetworkBridgeChild": "0x074bDe776884e16E798344de903Ec53B145951E3"
   }
 }
