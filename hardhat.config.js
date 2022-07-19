@@ -30,8 +30,21 @@ module.exports = {
    mumbai: {
      url: process.env.PROVIDER_MUMBAI,
      chainId: 80001,
-     //gasPrice: 10000000000,
+     gasPrice: 30000000000,
      accounts: {mnemonic: process.env.MNEMONIC}
+   },
+   polygon: {
+     url: process.env.PROVIDER_POLYGON,
+     accounts: {mnemonic: process.env.MNEMONIC},
+     gasPrice: 800000000000,
+     chainId: 137,
+   },
+   mainnet: {
+     url: process.env.PROVIDER_ETHEREUM_MAINNET,
+     accounts: {mnemonic: process.env.MNEMONIC},
+     gasPrice: 12000000000,
+     chainId: 1,
+
    },
    goerli: {
      url: process.env.PROVIDER_GOERLI,

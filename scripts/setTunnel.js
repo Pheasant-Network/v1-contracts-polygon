@@ -1,13 +1,13 @@
 const HDWalletProvider = require("@truffle/hdwallet-provider");
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config();
 const Web3 = require('web3');
 const readlineSync = require('readline-sync')
 const fs = require('fs');
 const utils = require('./utils')
 
-const childManager = JSON.parse(fs.readFileSync('../artifacts/contracts/tunnel/PolygonChildCheckPointManager.sol/PolygonChildCheckPointManager.json', 'utf8'));
-const rootManager = JSON.parse(fs.readFileSync('../artifacts/contracts/tunnel/PolygonRootCheckPointManager.sol/PolygonRootCheckPointManager.json', 'utf8'));
-let contractAddressObj = utils.getContractAddresses("../")
+const childManager = JSON.parse(fs.readFileSync('./artifacts/contracts/tunnel/PolygonChildCheckPointManager.sol/PolygonChildCheckPointManager.json', 'utf8'));
+const rootManager = JSON.parse(fs.readFileSync('./artifacts/contracts/tunnel/PolygonRootCheckPointManager.sol/PolygonRootCheckPointManager.json', 'utf8'));
+let contractAddressObj = utils.getContractAddresses();
 const childAbi = childManager.abi;
 const rootAbi = rootManager.abi;
 const web3_goerli = new Web3(new HDWalletProvider({
