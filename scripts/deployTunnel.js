@@ -36,13 +36,15 @@ async function main() {
 
   if(hre.network.name == "mumbai" || hre.network.name == "polygon") {
     const polygonChildCheckPointManager = await PolygonChildCheckPointManager.connect(accounts[0]).deploy(fxChild);
-    console.log("PolygonChildCheckPointManager address:", polygonChildCheckPointManager.address);
     console.log("PolygonChildCheckPointManager TxHash:", polygonChildCheckPointManager.deployTransaction.hash);
+    await polygonChildCheckPointManager.deployed();
+    console.log("PolygonChildCheckPointManager address:", polygonChildCheckPointManager.address);
     contractAddressObj[hre.network.name].PolygonChildCheckPointManager = polygonChildCheckPointManager.address;
   }else if(hre.network.name == "goerli" || hre.network.name == "mainnet") {
     const polygonRootCheckPointManager = await PolygonRootCheckPointManager.connect(accounts[0]).deploy(checkPoint, fxRoot);
-    console.log("PolygonRootCheckPointManager address:", polygonRootCheckPointManager.address);
     console.log("PolygonRootCheckPointManager TxHash:", polygonRootCheckPointManager.deployTransaction.hash);
+    await polygonRootCheckPointManager.deployed();
+    console.log("PolygonRootCheckPointManager address:", polygonRootCheckPointManager.address);
     contractAddressObj[hre.network.name].PolygonRootCheckPointManager = polygonRootCheckPointManager.address;
   }
 

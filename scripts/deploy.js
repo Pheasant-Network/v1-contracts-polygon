@@ -42,11 +42,14 @@ async function main() {
 
   const pheasantNetworkBridgeChild = await PheasantNetworkBridgeChild.connect(accounts[0]).deploy(tokenAddressList, userDepositThreshold, disputeManagerAddress, newOwner);
 
+  console.log("PheasantNetworkBridgeChild TxHash:", pheasantNetworkBridgeChild.deployTransaction.hash);
+  await pheasantNetworkBridgeChild.deployed();
   console.log("PheasantNetworkBridgeChild address:", pheasantNetworkBridgeChild.address);
   const Helper = await hre.ethers.getContractFactory("Helper");
   const helper = await Helper.deploy(tokenAddressList, userDepositThreshold, disputeManagerAddress, newOwner);
+  console.log("Helper TxHash:", helper.deployTransaction.hash);
+  await helper.deployed();
   console.log("Helper address:", helper.address);
-
   contractAddressObj[hre.network.name].PheasantNetworkBridgeChild = pheasantNetworkBridgeChild.address;
   utils.writeContractAddresses(contractAddressObj)
 }
